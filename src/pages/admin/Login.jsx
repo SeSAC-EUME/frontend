@@ -78,29 +78,34 @@ function Login() {
     setIsLoading(true);
 
     try {
-      // API 호출 - axios 인스턴스 사용
-      const result = await axiosInstance.post('user/login', {
-        userId: formData.username,
-        userPw: formData.password,
-        loginType: 'admin',
-        organization: formData.organization
+      // API 호출 - API_ENDPOINTS 사용
+      const result = await axiosInstance.post(API_ENDPOINTS.ADMIN.LOGIN, {
+        loginId: formData.username,
+        password: formData.password,
+        loginType: 'LOCAL'
       });
 
-      // 로그인 성공
-      const userData = {
-        username: formData.username,
-        name: result.user?.userName || formData.username,
-        organization: formData.organization,
-        role: result.user?.role || '관리자',
-        loginTime: new Date().toISOString()
-      };
-
-      // 토큰 저장
+      // 로그인 성공 시 사용자 정보 및 토큰 저장
       if (result.token) {
-        localStorage.setItem('accessToken', result.token);
+        localStorage.setItem('token', result.token);
       }
 
-      // 세션 저장
+      // 사용자 정보 저장
+      const userData = {
+        userId: result.userId,
+        loginId: result.loginId,
+        name: result.name,
+        email: result.email,
+        groupId: result.groupId,
+        firstLogin: result.firstLogin,
+        userType: result.userType,
+        profileImage: result.profileImage,
+        backgroundTheme: result.backgroundTheme,
+        organization: formData.organization
+      };
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      // 세션 저장 (관리자 전용)
       saveSession(userData, formData.rememberMe);
 
       // 대시보드로 리다이렉트

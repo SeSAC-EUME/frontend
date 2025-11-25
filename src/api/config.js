@@ -8,14 +8,15 @@ export const JAVA_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/'
 
 // API 엔드포인트 상수
 export const API_ENDPOINTS = {
-  // 예시 엔드포인트
+  // 관리자 엔드포인트
   ADMIN: {
-    LOGIN: `${JAVA_URL}user/login`,
-    REGISTER: `${JAVA_URL}user/register`,
-    CHANGE_PASSWORD: `${JAVA_URL}user/change-password`,
+    LOGIN: `${JAVA_URL}admin/login`,
+    REGISTER: `${JAVA_URL}admin/register`,
+    CHANGE_PASSWORD: `${JAVA_URL}admin/change-password`,
   },
+  // 사용자 엔드포인트
   USER: {
-    LOGIN: `${JAVA_URL}user/login`,
+    // LOGIN: `${JAVA_URL}user/login`,
     LOGOUT: `${JAVA_URL}user/logout`,
     REGISTER: `${JAVA_URL}user/register`,
     UPDATE: `${JAVA_URL}user/update`,

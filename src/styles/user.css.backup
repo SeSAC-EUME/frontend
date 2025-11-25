@@ -797,19 +797,20 @@ body.dark-mode {
 }
 
 /* ===== 로그인 페이지 스타일 ===== */
-.login-page {
+.login-container {
   min-height: 100vh;
-  width: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+  padding: var(--spacing-4);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   position: relative;
   overflow: hidden;
 }
 
 /* 배경 애니메이션 효과 */
-.login-page::before {
+.login-container::before {
   content: '';
   position: absolute;
   top: -50%;
@@ -818,19 +819,6 @@ body.dark-mode {
   height: 200%;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
   animation: rotate 20s linear infinite;
-  z-index: 0;
-}
-
-.login-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: var(--spacing-4);
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 500px;
 }
 
 @keyframes rotate {
@@ -1349,6 +1337,29 @@ body.dark-mode {
   gap: var(--spacing-2);
 }
 
+/* 반응형 아이콘 크기 */
+@media (max-width: 768px) {
+  .icon-elderly {
+    width: 36px;
+    height: 36px;
+  }
+
+  .icon-button {
+    width: 56px;
+    height: 56px;
+  }
+
+  .emotion-icon-wrapper {
+    width: 72px;
+    height: 72px;
+  }
+
+  .emotion-icon {
+    width: 48px;
+    height: 48px;
+  }
+}
+
 /* 큰 화면에서 아이콘 크기 증가 */
 @media (min-width: 1024px) {
   .icon-elderly {
@@ -1552,6 +1563,13 @@ body.dark-mode {
     will-change: transform, opacity;
 }
 
+/* 모바일 반응형 */
+@media (max-width: 768px) {
+    .splash-logo {
+        height: 32px;
+    }
+}
+
 @keyframes logoEntrance {
     0% {
         opacity: 0;
@@ -1663,40 +1681,13 @@ body.dark-mode {
         transform: scale(1);
     }
 }
-/* 온보딩 페이지 */
-.onboarding-page {
-    min-height: 100vh;
-    width: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-}
-
-/* 배경 애니메이션 효과 */
-.onboarding-page::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-    animation: rotate 20s linear infinite;
-    z-index: 0;
-}
-
 /* 온보딩 컨테이너 */
 .onboarding-container {
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: var(--spacing-4);
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 500px;
+    padding: var(--spacing-3);
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--accent) 100%);
 }
 
 /* 뒤로가기 버튼 */
@@ -4727,6 +4718,21 @@ body.dark-mode {
     color: var(--primary-500);
 }
 
+/* 반응형 디자인 */
+@media (max-width: 390px) {
+    .emergency-button {
+        padding: var(--spacing-3);
+    }
+
+    .text-wrapper .number {
+        font-size: var(--text-2xl);
+    }
+
+    .message-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (min-width: 768px) {
     .emergency-buttons {
         max-width: var(--max-width-tablet);
@@ -5172,6 +5178,15 @@ body.dark-mode {
     color: var(--primary-500);
 }
 
+@media (max-width: 390px) {
+    .call-number {
+        font-size: 40px;
+    }
+
+    .additional-actions {
+        flex-direction: column;
+    }
+}
 /* ===== 설정 헤더 ===== */
 .settings-header {
     display: flex;

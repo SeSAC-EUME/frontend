@@ -14,16 +14,12 @@ import AdminEmergency from './pages/admin/Emergency';
 // User Pages
 import UserSplash from './pages/user/Splash';
 import UserLogin from './pages/user/Login';
+import OAuth2Redirect from './pages/user/OAuth2Redirect';
 import UserOnboarding1 from './pages/user/Onboarding1';
 import UserOnboarding2 from './pages/user/Onboarding2';
 import UserOnboarding3 from './pages/user/Onboarding3';
 import UserOnboarding4 from './pages/user/Onboarding4';
 import UserHome from './pages/user/Home';
-import UserChat from './pages/user/Chat';
-import UserHealth from './pages/user/Health';
-import UserWelfare from './pages/user/Welfare';
-import UserEmergency from './pages/user/Emergency';
-import UserSettings from './pages/user/Settings';
 
 // Router 설정
 const router = createBrowserRouter([
@@ -57,6 +53,10 @@ const router = createBrowserRouter([
     ],
   },
   {
+    path: '/oauth2/redirect',
+    element: <OAuth2Redirect />,
+  },
+  {
     path: '/user',
     children: [
       {
@@ -86,26 +86,6 @@ const router = createBrowserRouter([
       {
         path: 'home',
         element: <UserHome />,
-      },
-      {
-        path: 'chat',
-        element: <UserChat />,
-      },
-      {
-        path: 'health',
-        element: <UserHealth />,
-      },
-      {
-        path: 'welfare',
-        element: <UserWelfare />,
-      },
-      {
-        path: 'emergency',
-        element: <UserEmergency />,
-      },
-      {
-        path: 'settings',
-        element: <UserSettings />,
       },
     ],
   },

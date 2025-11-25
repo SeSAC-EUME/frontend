@@ -31,73 +31,71 @@ function Onboarding2() {
   };
 
   return (
-    <div className="theme-ocean">
-      <div className="app-container">
-        <div className="onboarding-container">
-          {/* 뒤로가기 버튼 */}
-          <button className="back-button" onClick={handleBack}>
-            ←
-          </button>
+    <div className="theme-ocean onboarding-page">
+      <div className="onboarding-container">
+        {/* 뒤로가기 버튼 */}
+        <button className="back-button" onClick={handleBack}>
+          ←
+        </button>
 
-          {/* 진행 표시 */}
-          <div className="progress-dots">
-            <span className="progress-dot completed"></span>
-            <span className="progress-dot active"></span>
-            <span className="progress-dot"></span>
-            <span className="progress-dot"></span>
-          </div>
+        {/* 진행 표시 */}
+        <div className="progress-dots">
+          <span className="progress-dot completed"></span>
+          <span className="progress-dot active"></span>
+          <span className="progress-dot"></span>
+          <span className="progress-dot"></span>
+        </div>
 
-          {/* 메인 콘텐츠 */}
-          <div className="onboarding-content">
-            <h1 className="onboarding-title">
-              어떻게<br />
-              불러드릴까요?
-            </h1>
+        {/* 메인 콘텐츠 */}
+        <div className="onboarding-content">
+          <h1 className="onboarding-title">
+            어떻게<br />
+            불러드릴까요?
+          </h1>
 
-            <p className="onboarding-description">
-              편하게 불러드릴<br />
-              이름을 알려주세요
-            </p>
+          <p className="onboarding-description">
+            편하게 불러드릴<br />
+            이름을 알려주세요
+          </p>
 
-            <div className="input-container">
-              <div className="input-group">
-                <input
-                  type="text"
-                  className="input input-large"
-                  placeholder="예: 영희, 김영희"
-                  maxLength="10"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  autoFocus
-                />
-                <p className="input-hint">💡 본명이나 별명 모두 좋아요</p>
-              </div>
-
-              {/* 빠른 선택 */}
-              {/*<div className="quick-select">*/}
-              {/*  <p className="quick-select-label">또는 선택하세요:</p>*/}
-              {/*  <div className="name-options">*/}
-              {/*    <button className="name-option" onClick={() => handleSetName('어르신')}>*/}
-              {/*      어르신*/}
-              {/*    </button>*/}
-              {/*    <button className="name-option" onClick={() => handleSetName('선생님')}>*/}
-              {/*      선생님*/}
-              {/*    </button>*/}
-              {/*  </div>*/}
-              {/*</div>*/}
+          <div className="input-container">
+            <div className="input-group">
+              <input
+                type="text"
+                className="input input-large"
+                placeholder="예: 영희, 김영희"
+                maxLength="10"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                autoFocus
+              />
+              <p className="input-hint">💡 본명이나 별명 모두 좋아요</p>
             </div>
-          </div>
 
-          {/* 버튼 영역 */}
-          <div className="button-container">
-            <button
-              className="btn btn-primary btn-large btn-full"
-              onClick={handleNext}
-              disabled={userName.trim().length === 0}
-            >
-              다음
-            </button>
+            {/* 빠른 선택 */}
+            {/*<div className="quick-select">*/}
+            {/*  <p className="quick-select-label">또는 선택하세요:</p>*/}
+            {/*  <div className="name-options">*/}
+            {/*    <button className="name-option" onClick={() => handleSetName('어르신')}>*/}
+            {/*      어르신*/}
+            {/*    </button>*/}
+            {/*    <button className="name-option" onClick={() => handleSetName('선생님')}>*/}
+            {/*      선생님*/}
+            {/*    </button>*/}
+            {/*  </div>*/}
+            {/*</div>*/}
           </div>
+        </div>
+
+        {/* 버튼 영역 */}
+        <div className="button-container">
+          <button
+            className="btn btn-primary btn-large btn-full"
+            onClick={handleNext}
+            disabled={userName.trim().length === 0}
+          >
+            다음
+          </button>
         </div>
       </div>
     </div>

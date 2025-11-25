@@ -25,7 +25,7 @@ function Splash() {
         return;
       }
 
-      // 로그인 됨 + 온보딩 완료 -> 홈 페이지
+      // 로그인 됨 + 온보딩 완료 -> 설정 페이지
       navigate('/user/home');
     }, 1000);
 

@@ -5,10 +5,7 @@ import '../../styles/user.css';
 function Onboarding3() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    userId: '',
     email: '',
-    userPw: '',
-    userPwConfirm: '',
     userName: '',
     birthDate: '',
     gender: '',
@@ -18,7 +15,6 @@ function Onboarding3() {
 
   useEffect(() => {
     // 기존 저장된 데이터 로드
-    const savedUserId = localStorage.getItem('eume_userId') || '';
     const savedEmail = localStorage.getItem('eume_email') || '';
     const savedUserName = localStorage.getItem('eume_realName') || '';
     const savedBirthDate = localStorage.getItem('eume_birthDate') || '';
@@ -27,7 +23,6 @@ function Onboarding3() {
 
     setFormData((prev) => ({
       ...prev,
-      userId: savedUserId,
       email: savedEmail,
       userName: savedUserName,
       birthDate: savedBirthDate,
@@ -50,27 +45,6 @@ function Onboarding3() {
 
   const validateForm = () => {
     const newErrors = {};
-
-    // 아이디 검증
-    if (!formData.userId.trim()) {
-      newErrors.userId = '아이디를 입력해주세요';
-    } else if (formData.userId.length < 4) {
-      newErrors.userId = '아이디는 4자 이상이어야 합니다';
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.userId)) {
-      newErrors.userId = '아이디는 영문, 숫자, 언더스코어만 사용 가능합니다';
-    }
-
-    // 비밀번호 검증
-    if (!formData.userPw) {
-      newErrors.userPw = '비밀번호를 입력해주세요';
-    } else if (formData.userPw.length < 6) {
-      newErrors.userPw = '비밀번호는 6자 이상이어야 합니다';
-    }
-
-    // 비밀번호 확인
-    if (formData.userPw !== formData.userPwConfirm) {
-      newErrors.userPwConfirm = '비밀번호가 일치하지 않습니다';
-    }
 
     // 이름 검증
     if (!formData.userName.trim()) {
@@ -116,9 +90,7 @@ function Onboarding3() {
   const handleNext = () => {
     if (validateForm()) {
       // 데이터 저장
-      localStorage.setItem('eume_userId', formData.userId);
       localStorage.setItem('eume_email', formData.email);
-      localStorage.setItem('eume_userPw', formData.userPw);
       localStorage.setItem('eume_realName', formData.userName);
       localStorage.setItem('eume_birthDate', formData.birthDate);
       localStorage.setItem('eume_gender', formData.gender);
@@ -150,10 +122,7 @@ function Onboarding3() {
 
   const isFormValid = () => {
     return (
-      formData.userId &&
       formData.email &&
-      formData.userPw &&
-      formData.userPwConfirm &&
       formData.userName &&
       formData.birthDate &&
       formData.gender &&
@@ -162,9 +131,8 @@ function Onboarding3() {
   };
 
   return (
-    <div className="theme-ocean">
-      <div className="app-container">
-        <div className="onboarding-container">
+    <div className="theme-ocean onboarding-page">
+      <div className="onboarding-container">
           {/* 뒤로가기 버튼 */}
           <button className="back-button" onClick={handleBack}>
             ←
@@ -191,46 +159,6 @@ function Onboarding3() {
             </p>
 
             <div className="input-container" style={{ gap: '1.25rem', marginTop: '1.5rem' }}>
-              {/* 아이디 */}
-              <div className="input-group">
-                <label className="input-label">아이디</label>
-                <input
-                  type="text"
-                  className={`input input-large ${errors.userId ? 'input-error' : ''}`}
-                  placeholder="영문, 숫자 4자 이상"
-                  maxLength="20"
-                  value={formData.userId}
-                  onChange={(e) => handleChange('userId', e.target.value)}
-                />
-                {errors.userId && <p className="input-error-text">{errors.userId}</p>}
-              </div>
-
-              {/* 비밀번호 */}
-              <div className="input-group">
-                <label className="input-label">비밀번호</label>
-                <input
-                  type="password"
-                  className={`input input-large ${errors.userPw ? 'input-error' : ''}`}
-                  placeholder="6자 이상 입력"
-                  value={formData.userPw}
-                  onChange={(e) => handleChange('userPw', e.target.value)}
-                />
-                {errors.userPw && <p className="input-error-text">{errors.userPw}</p>}
-              </div>
-
-              {/* 비밀번호 확인 */}
-              <div className="input-group">
-                <label className="input-label">비밀번호 확인</label>
-                <input
-                  type="password"
-                  className={`input input-large ${errors.userPwConfirm ? 'input-error' : ''}`}
-                  placeholder="비밀번호 다시 입력"
-                  value={formData.userPwConfirm}
-                  onChange={(e) => handleChange('userPwConfirm', e.target.value)}
-                />
-                {errors.userPwConfirm && <p className="input-error-text">{errors.userPwConfirm}</p>}
-              </div>
-
               {/* 이름 */}
               <div className="input-group">
                 <label className="input-label">이름</label>
@@ -320,7 +248,6 @@ function Onboarding3() {
           </div>
         </div>
       </div>
-    </div>
   );
 }
 
