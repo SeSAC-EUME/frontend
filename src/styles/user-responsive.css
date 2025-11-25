@@ -1,0 +1,729 @@
+/* ==================== User 페이지 포괄적 반응형 스타일 ==================== */
+
+/* ===== 모바일 최적화 (<768px) ===== */
+@media (max-width: 767px) {
+    /* 컨테이너 */
+    .app-container {
+        padding: 0.75rem !important;
+        max-width: 100% !important;
+    }
+
+    /* 헤더 */
+    .home-header,
+    .header-top {
+        padding: 0.75rem !important;
+        flex-wrap: wrap;
+    }
+
+    .header-icons {
+        gap: 0.5rem !important;
+    }
+
+    /* 타이틀 */
+    .greeting-title,
+    .section-title {
+        font-size: clamp(1.25rem, 5vw, 1.5rem) !important;
+    }
+
+    .greeting-name {
+        font-size: clamp(1rem, 4vw, 1.25rem) !important;
+    }
+
+    /* 그리드 레이아웃 */
+    .quick-menu-grid,
+    .emotion-buttons {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.75rem !important;
+    }
+
+    .quick-menu-item {
+        padding: 1rem !important;
+        min-height: 120px !important;
+    }
+
+    .menu-emoji {
+        font-size: 2rem !important;
+    }
+
+    .menu-title {
+        font-size: 1rem !important;
+    }
+
+    .menu-desc {
+        font-size: 0.75rem !important;
+    }
+
+    /* 버튼 */
+    button,
+    .button,
+    .primary-button,
+    .secondary-button {
+        padding: 0.875rem 1.25rem !important;
+        font-size: 1rem !important;
+        min-height: 48px !important;
+    }
+
+    .emotion-select-btn {
+        padding: 1rem !important;
+        min-width: 80px !important;
+    }
+
+    .emotion-emoji {
+        font-size: 2rem !important;
+    }
+
+    .emotion-label {
+        font-size: 0.875rem !important;
+    }
+
+    /* 카드 */
+    .greeting-card,
+    .activity-card,
+    .card {
+        padding: 1rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    /* 네비게이션 */
+    .nav-bottom {
+        padding: 0.5rem !important;
+        gap: 0.25rem !important;
+    }
+
+    .nav-item {
+        padding: 0.5rem !important;
+        gap: 0.25rem !important;
+    }
+
+    .nav-icon {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    .nav-label {
+        font-size: 0.75rem !important;
+    }
+
+    /* 폼 요소 */
+    input,
+    textarea,
+    select {
+        padding: 0.875rem !important;
+        font-size: 1rem !important;
+    }
+
+    /* 날씨 정보 */
+    .weather-info {
+        flex-direction: column;
+        gap: 0.25rem !important;
+        font-size: 0.875rem !important;
+    }
+
+    /* 활동 카드 */
+    .activity-cards {
+        gap: 0.75rem !important;
+    }
+
+    .activity-icon {
+        font-size: 1.5rem !important;
+    }
+
+    .activity-title {
+        font-size: 0.875rem !important;
+    }
+
+    .activity-time {
+        font-size: 0.75rem !important;
+    }
+
+    /* 메시지 버블 */
+    .message-bubble {
+        max-width: 85% !important;
+        padding: 0.875rem !important;
+        font-size: 1rem !important;
+    }
+
+    /* 모달 */
+    .modal-content {
+        width: 95% !important;
+        max-width: 100% !important;
+        padding: 1.25rem !important;
+    }
+
+    .modal-title {
+        font-size: 1.25rem !important;
+    }
+
+    /* 테이블 */
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        font-size: 0.875rem !important;
+    }
+
+    th,
+    td {
+        padding: 0.5rem !important;
+    }
+
+    /* 이미지 */
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* 간격 조정 */
+    section {
+        margin-bottom: 1.5rem !important;
+    }
+
+    .section-title {
+        margin-bottom: 0.75rem !important;
+    }
+
+    /* 터치 영역 확대 */
+    button,
+    a,
+    input[type="checkbox"],
+    input[type="radio"],
+    .touchable {
+        min-height: 48px;
+        min-width: 48px;
+    }
+}
+
+/* ===== 태블릿 최적화 (768px - 1199px) ===== */
+@media (min-width: 768px) and (max-width: 1199px) {
+    /* 컨테이너 */
+    .app-container {
+        padding: 1.5rem !important;
+        max-width: 100% !important;
+    }
+
+    /* 헤더 */
+    .home-header,
+    .header-top {
+        padding: 1rem 1.5rem !important;
+    }
+
+    /* 타이틀 */
+    .greeting-title,
+    .section-title {
+        font-size: clamp(1.5rem, 4vw, 1.75rem) !important;
+    }
+
+    .greeting-name {
+        font-size: clamp(1.125rem, 3vw, 1.375rem) !important;
+    }
+
+    /* 그리드 레이아웃 */
+    .quick-menu-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 1.25rem !important;
+    }
+
+    .emotion-buttons {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 1rem !important;
+    }
+
+    .quick-menu-item {
+        padding: 1.5rem !important;
+        min-height: 140px !important;
+    }
+
+    .menu-emoji {
+        font-size: 2.5rem !important;
+    }
+
+    .menu-title {
+        font-size: 1.125rem !important;
+    }
+
+    .menu-desc {
+        font-size: 0.875rem !important;
+    }
+
+    /* 버튼 */
+    button,
+    .button,
+    .primary-button,
+    .secondary-button {
+        padding: 1rem 1.5rem !important;
+        font-size: 1.0625rem !important;
+        min-height: 52px !important;
+    }
+
+    .emotion-select-btn {
+        padding: 1.25rem !important;
+        min-width: 100px !important;
+    }
+
+    .emotion-emoji {
+        font-size: 2.5rem !important;
+    }
+
+    .emotion-label {
+        font-size: 1rem !important;
+    }
+
+    /* 카드 */
+    .greeting-card,
+    .activity-card,
+    .card {
+        padding: 1.5rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    /* 네비게이션 */
+    .nav-bottom {
+        padding: 0.75rem 1rem !important;
+        gap: 0.5rem !important;
+    }
+
+    .nav-item {
+        padding: 0.75rem 1rem !important;
+        gap: 0.5rem !important;
+    }
+
+    .nav-icon {
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    .nav-label {
+        font-size: 0.875rem !important;
+    }
+
+    /* 폼 요소 */
+    input,
+    textarea,
+    select {
+        padding: 1rem !important;
+        font-size: 1.0625rem !important;
+    }
+
+    /* 활동 카드 */
+    .activity-cards {
+        gap: 1rem !important;
+    }
+
+    .activity-icon {
+        font-size: 2rem !important;
+    }
+
+    .activity-title {
+        font-size: 1rem !important;
+    }
+
+    .activity-time {
+        font-size: 0.875rem !important;
+    }
+
+    /* 메시지 버블 */
+    .message-bubble {
+        max-width: 75% !important;
+        padding: 1rem !important;
+        font-size: 1.0625rem !important;
+    }
+
+    /* 모달 */
+    .modal-content {
+        width: 85% !important;
+        max-width: 600px !important;
+        padding: 1.5rem !important;
+    }
+
+    .modal-title {
+        font-size: 1.5rem !important;
+    }
+
+    /* 2열 레이아웃 */
+    .two-column-tablet {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    /* 간격 조정 */
+    section {
+        margin-bottom: 2rem !important;
+    }
+
+    .section-title {
+        margin-bottom: 1rem !important;
+    }
+
+    /* 터치 영역 */
+    button,
+    a,
+    input[type="checkbox"],
+    input[type="radio"],
+    .touchable {
+        min-height: 52px;
+        min-width: 52px;
+    }
+}
+
+/* ===== 데스크톱 최적화 (>=1200px) ===== */
+@media (min-width: 1200px) {
+    /* 컨테이너 */
+    .app-container {
+        max-width: 1200px !important;
+        margin: 0 auto !important;
+        padding: 2rem !important;
+    }
+
+    /* 헤더 */
+    .home-header,
+    .header-top {
+        padding: 1.25rem 2rem !important;
+    }
+
+    /* 타이틀 */
+    .greeting-title,
+    .section-title {
+        font-size: 2rem !important;
+    }
+
+    .greeting-name {
+        font-size: 1.5rem !important;
+    }
+
+    /* 그리드 레이아웃 */
+    .quick-menu-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 1.5rem !important;
+    }
+
+    .emotion-buttons {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 1.25rem !important;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .quick-menu-item {
+        padding: 2rem !important;
+        min-height: 160px !important;
+    }
+
+    .menu-emoji {
+        font-size: 3rem !important;
+    }
+
+    .menu-title {
+        font-size: 1.25rem !important;
+    }
+
+    .menu-desc {
+        font-size: 1rem !important;
+    }
+
+    /* 버튼 */
+    button,
+    .button,
+    .primary-button,
+    .secondary-button {
+        padding: 1.125rem 2rem !important;
+        font-size: 1.125rem !important;
+        min-height: 56px !important;
+    }
+
+    .emotion-select-btn {
+        padding: 1.5rem !important;
+        min-width: 120px !important;
+    }
+
+    .emotion-emoji {
+        font-size: 3rem !important;
+    }
+
+    .emotion-label {
+        font-size: 1.125rem !important;
+    }
+
+    /* 카드 */
+    .greeting-card,
+    .activity-card,
+    .card {
+        padding: 2rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    /* 네비게이션 */
+    .nav-bottom {
+        padding: 1rem 2rem !important;
+        gap: 1rem !important;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .nav-item {
+        padding: 1rem 1.5rem !important;
+        gap: 0.5rem !important;
+    }
+
+    .nav-icon {
+        width: 28px !important;
+        height: 28px !important;
+    }
+
+    .nav-label {
+        font-size: 1rem !important;
+    }
+
+    /* 폼 요소 */
+    input,
+    textarea,
+    select {
+        padding: 1.125rem !important;
+        font-size: 1.125rem !important;
+    }
+
+    /* 활동 카드 */
+    .activity-cards {
+        gap: 1.25rem !important;
+    }
+
+    .activity-icon {
+        font-size: 2.5rem !important;
+    }
+
+    .activity-title {
+        font-size: 1.125rem !important;
+    }
+
+    .activity-time {
+        font-size: 1rem !important;
+    }
+
+    /* 메시지 버블 */
+    .message-bubble {
+        max-width: 65% !important;
+        padding: 1.25rem !important;
+        font-size: 1.125rem !important;
+    }
+
+    /* 모달 */
+    .modal-content {
+        width: 70% !important;
+        max-width: 700px !important;
+        padding: 2rem !important;
+    }
+
+    .modal-title {
+        font-size: 1.75rem !important;
+    }
+
+    /* 3열 레이아웃 */
+    .three-column-desktop {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
+
+    /* 사이드바 레이아웃 */
+    .sidebar-layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 2rem;
+    }
+
+    /* 간격 조정 */
+    section {
+        margin-bottom: 2.5rem !important;
+    }
+
+    .section-title {
+        margin-bottom: 1.25rem !important;
+    }
+
+    /* 호버 효과 강화 */
+    button:hover,
+    .button:hover,
+    .quick-menu-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+}
+
+/* ===== 공통 반응형 유틸리티 ===== */
+
+/* 반응형 텍스트 */
+.text-responsive-xs {
+    font-size: clamp(0.75rem, 2vw, 0.875rem);
+}
+
+.text-responsive-sm {
+    font-size: clamp(0.875rem, 2.5vw, 1rem);
+}
+
+.text-responsive-base {
+    font-size: clamp(1rem, 3vw, 1.125rem);
+}
+
+.text-responsive-lg {
+    font-size: clamp(1.125rem, 3.5vw, 1.25rem);
+}
+
+.text-responsive-xl {
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+}
+
+.text-responsive-2xl {
+    font-size: clamp(1.5rem, 5vw, 2rem);
+}
+
+/* 반응형 간격 */
+.spacing-responsive-xs {
+    padding: clamp(0.25rem, 1vw, 0.5rem);
+}
+
+.spacing-responsive-sm {
+    padding: clamp(0.5rem, 2vw, 1rem);
+}
+
+.spacing-responsive-md {
+    padding: clamp(1rem, 3vw, 1.5rem);
+}
+
+.spacing-responsive-lg {
+    padding: clamp(1.5rem, 4vw, 2rem);
+}
+
+.spacing-responsive-xl {
+    padding: clamp(2rem, 5vw, 3rem);
+}
+
+/* 반응형 그리드 */
+.grid-auto-fit {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: clamp(1rem, 3vw, 1.5rem);
+}
+
+@media (min-width: 768px) {
+    .grid-auto-fit {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .grid-auto-fit {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+    }
+}
+
+/* 반응형 Flexbox */
+.flex-responsive {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+@media (min-width: 768px) {
+    .flex-responsive {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+/* 반응형 숨김/표시 */
+@media (max-width: 767px) {
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+    .hide-tablet {
+        display: none !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    .hide-desktop {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .show-mobile-only {
+        display: none !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .show-tablet-up {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1199px) {
+    .show-desktop-only {
+        display: none !important;
+    }
+}
+
+/* ===== 터치 최적화 (모바일/태블릿) ===== */
+@media (max-width: 1199px) {
+    /* 터치 피드백 */
+    button:active,
+    .button:active,
+    .touchable:active {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+
+    /* 스크롤 개선 */
+    .scrollable {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+}
+
+/* ===== 접근성 향상 ===== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* 고대비 모드 지원 */
+@media (prefers-contrast: high) {
+    button,
+    .button,
+    input,
+    select,
+    textarea {
+        border-width: 2px;
+    }
+}
+
+/* ===== 인쇄 최적화 ===== */
+@media print {
+    .nav-bottom,
+    .header-icons,
+    button,
+    .button {
+        display: none !important;
+    }
+
+    .app-container {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    * {
+        background: white !important;
+        color: black !important;
+    }
+}

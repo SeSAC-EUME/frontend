@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # React 프론트엔드
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eume-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://backend:8080/
+    networks:
+      - eume-network
+    depends_on:
+      - backend
+
+  # Spring Boot 백엔드 (별도 프로젝트로 구성 시 주석 해제)
+  # backend:
+  #   build:
+  #     context: ../your-spring-boot-project
+  #     dockerfile: Dockerfile
+  #   container_name: eume-backend
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - SPRING_PROFILES_ACTIVE=prod
+  #     - DATABASE_URL=jdbc:mysql://db:3306/eume
+  #   networks:
+  #     - eume-network
+  #   depends_on:
+  #     - db
+
+  # MySQL 데이터베이스 (필요시 주석 해제)
+  # db:
+  #   image: mysql:8.0
+  #   container_name: eume-db
+  #   ports:
+  #     - "3306:3306"
+  #   environment:
+  #     - MYSQL_ROOT_PASSWORD=root
+  #     - MYSQL_DATABASE=eume
+  #     - MYSQL_USER=eume_user
+  #     - MYSQL_PASSWORD=eume_password
+  #   volumes:
+  #     - mysql-data:/var/lib/mysql
+  #   networks:
+  #     - eume-network
+
+networks:
+  eume-network:
+    driver: bridge
+
+# volumes:
+#   mysql-data:

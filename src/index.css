@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 전역 스타일 */
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* 반응형 폰트 사이즈 변수 */
+  --font-xs: clamp(0.75rem, 2vw, 0.875rem);
+  --font-sm: clamp(0.875rem, 2.5vw, 1rem);
+  --font-base: clamp(1rem, 3vw, 1.125rem);
+  --font-lg: clamp(1.125rem, 3.5vw, 1.25rem);
+  --font-xl: clamp(1.25rem, 4vw, 1.5rem);
+  --font-2xl: clamp(1.5rem, 5vw, 2rem);
+  --font-3xl: clamp(1.875rem, 6vw, 2.5rem);
+
+  /* 반응형 간격 변수 */
+  --spacing-xs: clamp(0.25rem, 1vw, 0.5rem);
+  --spacing-sm: clamp(0.5rem, 2vw, 1rem);
+  --spacing-md: clamp(1rem, 3vw, 1.5rem);
+  --spacing-lg: clamp(1.5rem, 4vw, 2rem);
+  --spacing-xl: clamp(2rem, 5vw, 3rem);
+
+  /* 반응형 터치 영역 (노인 친화) */
+  --touch-target: clamp(44px, 10vw, 56px);
+
+  /* 반응형 컨테이너 패딩 */
+  --container-padding: clamp(1rem, 4vw, 2rem);
+}
+
+/* 모바일 최적화 */
+@media (max-width: 767px) {
+  :root {
+    --font-base: 16px;
+    --font-lg: 18px;
+    --font-xl: 20px;
+    --touch-target: 48px;
+  }
+}
+
+/* 태블릿 최적화 */
+@media (min-width: 768px) and (max-width: 1199px) {
+  :root {
+    --font-base: 17px;
+    --font-lg: 19px;
+    --font-xl: 22px;
+    --touch-target: 52px;
+  }
+}
+
+/* 데스크톱 최적화 */
+@media (min-width: 1200px) {
+  :root {
+    --font-base: 18px;
+    --font-lg: 20px;
+    --font-xl: 24px;
+    --touch-target: 56px;
+  }
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* 커스텀 애니메이션 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* 반응형 컨테이너 */
+.container-custom {
+  @apply max-w-7xl mx-auto;
+  padding-left: var(--container-padding);
+  padding-right: var(--container-padding);
+}
+
+/* 반응형 그리드 유틸리티 */
+.grid-responsive {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+}
+
+@media (min-width: 768px) {
+  .grid-responsive {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .grid-responsive {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
+  }
+}
+
+/* 반응형 이미지 */
+.img-responsive {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
