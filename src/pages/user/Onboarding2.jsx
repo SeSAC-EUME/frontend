@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../../styles/user.css';
+import { useTheme } from '../../contexts/ThemeContext';
 
 function Onboarding2() {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
+  const { theme } = useTheme();
 
   useEffect(() => {
     // 기존에 저장된 이름 로드
@@ -31,7 +33,7 @@ function Onboarding2() {
   };
 
   return (
-    <div className="theme-ocean onboarding-page">
+    <div className={`theme-${theme} onboarding-page`}>
       <div className="onboarding-container">
         {/* 뒤로가기 버튼 */}
         <button className="back-button" onClick={handleBack}>
@@ -55,7 +57,7 @@ function Onboarding2() {
 
           <p className="onboarding-description">
             편하게 불러드릴<br />
-            이름을 알려주세요
+            닉네임을 알려주세요
           </p>
 
           <div className="input-container">
@@ -63,7 +65,7 @@ function Onboarding2() {
               <input
                 type="text"
                 className="input input-large"
-                placeholder="예: 영희, 김영희"
+                placeholder="예: 철수, 영희"
                 maxLength="10"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
@@ -72,7 +74,7 @@ function Onboarding2() {
               <p className="input-hint">💡 본명이나 별명 모두 좋아요</p>
             </div>
 
-            {/* 빠른 선택 */}
+            {/*빠른 선택 */}
             {/*<div className="quick-select">*/}
             {/*  <p className="quick-select-label">또는 선택하세요:</p>*/}
             {/*  <div className="name-options">*/}

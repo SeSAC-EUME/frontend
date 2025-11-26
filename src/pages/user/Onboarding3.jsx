@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../../styles/user.css';
+import { useTheme } from '../../contexts/ThemeContext';
 
 function Onboarding3() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ function Onboarding3() {
     phone: '',
   });
   const [errors, setErrors] = useState({});
+  const { theme } = useTheme();
 
   useEffect(() => {
     // 기존 저장된 데이터 로드
@@ -131,7 +133,7 @@ function Onboarding3() {
   };
 
   return (
-    <div className="theme-ocean onboarding-page">
+    <div className={`theme-${theme} onboarding-page`}>
       <div className="onboarding-container">
           {/* 뒤로가기 버튼 */}
           <button className="back-button" onClick={handleBack}>

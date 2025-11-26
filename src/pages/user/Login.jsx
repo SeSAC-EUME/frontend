@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import '../../styles/user.css';
 import logo from '../../assets/shared/logo.svg';
 import { JAVA_URL } from '../../api/config';
+import { useTheme } from '../../contexts/ThemeContext';
 
 function Login() {
   const [error, setError] = useState('');
+  const { theme } = useTheme();
 
   const handleGoogleLogin = () => {
     setError('');
@@ -20,7 +22,7 @@ function Login() {
   };
 
   return (
-    <div className="theme-ocean login-page">
+    <div className={`theme-${theme} login-page`}>
       <div className="login-container">
         {/* 로고 및 타이틀 */}
         <div className="login-logo-section">

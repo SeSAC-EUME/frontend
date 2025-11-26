@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import '../../styles/user.css';
+import { useTheme } from '../../contexts/ThemeContext';
 
 function Onboarding1() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const handleSkip = () => {
     localStorage.setItem('eume_onboarding_complete', 'true');
@@ -14,7 +16,7 @@ function Onboarding1() {
   };
 
   return (
-    <div className="theme-ocean onboarding-page">
+    <div className={`theme-${theme} onboarding-page`}>
       <div className="onboarding-container">
         {/* 진행 표시 */}
         <div className="progress-dots">
