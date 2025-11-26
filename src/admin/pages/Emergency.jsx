@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/admin.css';
+import '../styles/admin.css';
 
 function Emergency() {
   const navigate = useNavigate();
@@ -49,12 +49,12 @@ function Emergency() {
   // 긴급상황 데이터 생성
   const generateEmergencies = () => {
     const users = [
-      { id: 1, name: '김영희', age: 78, address: '파주시 금촌동' },
-      { id: 2, name: '박철수', age: 82, address: '파주시 문산읍' },
-      { id: 3, name: '이순자', age: 75, address: '파주시 교하동' },
-      { id: 4, name: '최영수', age: 80, address: '파주시 운정동' },
-      { id: 5, name: '정미란', age: 76, address: '파주시 조리읍' },
-      { id: 6, name: '강동원', age: 84, address: '파주시 탄현면' }
+      { id: 1, name: '김영희', age: 78, address: '서울시 강남구' },
+      { id: 2, name: '박철수', age: 82, address: '서울시 마포구' },
+      { id: 3, name: '이순자', age: 75, address: '서울시 종로구' },
+      { id: 4, name: '최영수', age: 80, address: '서울시 송파구' },
+      { id: 5, name: '정미란', age: 76, address: '서울시 서초구' },
+      { id: 6, name: '강동원', age: 84, address: '서울시 영등포구' }
     ];
 
     const types = ['낙상', '응급', '외로움', '건강', '약물', '우울', '통증', '호흡곤란'];
@@ -267,7 +267,7 @@ function Emergency() {
             </div>
             <div className="user-details">
               <span className="user-name">{currentUser.name || '홍길동'}</span>
-              <span className="user-role">{currentUser.role || '파주시청 복지과'}</span>
+              <span className="user-role">{currentUser.role || '서울시청 복지과'}</span>
             </div>
             <button className="dropdown-toggle">
               <img src="/admin-ui/assets/icons/chevron-down.svg" alt="더보기" style={{ width: '12px', height: '12px' }} />

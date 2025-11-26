@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/admin.css';
+import '../styles/admin.css';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -77,7 +77,7 @@ function Dashboard() {
             </div>
             <div className="user-details">
               <span className="user-name">{currentUser.name || '홍길동'}</span>
-              <span className="user-role">{currentUser.role || '파주시청 복지과'}</span>
+              <span className="user-role">{currentUser.role || '서울시청 복지과'}</span>
             </div>
             <button className="dropdown-toggle">
               <img src="/admin-ui/assets/icons/chevron-down.svg" alt="더보기" style={{ width: '12px', height: '12px' }} />
@@ -277,7 +277,7 @@ function Dashboard() {
                 </div>
                 <div className="activity-content">
                   <div className="activity-title">김영희 님이 복지 서비스 신청을 완료했습니다</div>
-                  <div className="activity-description">독거노인 도시락 서비스 신청</div>
+                  <div className="activity-description">청년 식사 지원 서비스 신청</div>
                 </div>
                 <div className="activity-time">5분 전</div>
               </div>

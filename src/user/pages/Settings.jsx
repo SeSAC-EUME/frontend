@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/user.css';
+import '../styles/user.css';
 
 function Settings() {
   const navigate = useNavigate();
@@ -335,8 +335,8 @@ function Settings() {
 
   // 문의하기
   const contactSupport = () => {
-    if (window.confirm('청년 복지센터(031-940-1234)로 전화하시겠습니까?')) {
-      window.location.href = 'tel:031-940-1234';
+    if (window.confirm('청년 복지센터(02-2133-1234)로 전화하시겠습니까?')) {
+      window.location.href = 'tel:02-2133-1234';
     }
   };
 
@@ -386,7 +386,7 @@ function Settings() {
             </div>
             <div className="profile-info">
               <h2 className="profile-name">{profileName}</h2>
-              <p className="profile-desc">파주시 거주</p>
+              <p className="profile-desc">서울시 거주</p>
             </div>
             <button className="profile-edit" onClick={editProfile}>
               수정

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import '../../styles/user.css';
-import { useTheme } from '../../contexts/ThemeContext';
+import '../styles/user.css';
+import { useTheme } from '../../shared/contexts/ThemeContext';
 
 function Onboarding1() {
   const navigate = useNavigate();

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import '../../styles/user.css';
-import logo from '../../assets/shared/logo.svg';
-import { JAVA_URL } from '../../api/config';
-import { useTheme } from '../../contexts/ThemeContext';
+import '../styles/user.css';
+import logo from '../../shared/assets/logo.svg';
+import { JAVA_URL } from '../../shared/api/config';
+import { useTheme } from '../../shared/contexts/ThemeContext';
 
 function Login() {
   const [error, setError] = useState('');

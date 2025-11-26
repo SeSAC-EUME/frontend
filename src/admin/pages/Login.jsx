@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/admin.css';
-import logo from '../../assets/shared/logo.png';
-import lockIcon from '../../assets/admin/icons/lock.svg';
-import { API_ENDPOINTS } from '../../api/config';
-import axiosInstance from '../../api/axios';
+import '../styles/admin.css';
+import logo from '../../shared/assets/logo.png';
+import lockIcon from '../assets/icons/lock.svg';
+import { API_ENDPOINTS } from '../../shared/api/config';
+import axiosInstance from '../../shared/api/axios';
 
 function Login() {
   const navigate = useNavigate();
@@ -152,7 +152,7 @@ function Login() {
         <div className="login-header">
           <img src={logo} alt="이음이 로고" className="admin-logo" />
           <h1>이음이 관리 시스템</h1>
-          <p className="subtitle">파주시 독거 노인 정서 돌봄 AI 복지 에이전트</p>
+          <p className="subtitle">서울시 고립은둔청년 정서 돌봄 AI 복지 에이전트</p>
         </div>
 
         {/* 로그인 폼 */}
@@ -176,10 +176,10 @@ function Login() {
                 required
               >
                 <option value="">기관을 선택하세요</option>
-                <option value="paju-city">파주시청</option>
-                <option value="welfare-center">파주시 노인복지관</option>
-                <option value="health-center">파주시 보건소</option>
-                <option value="social-service">파주시 사회복지과</option>
+                <option value="seoul-city">서울시청</option>
+                <option value="welfare-center">서울시 청년복지관</option>
+                <option value="health-center">서울시 보건소</option>
+                <option value="social-service">서울시 사회복지과</option>
               </select>
             </div>
 

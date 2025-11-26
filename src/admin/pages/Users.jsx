@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/admin.css';
+import '../styles/admin.css';
 
 function Users() {
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ function Users() {
       name: '김영희',
       age: 78,
       gender: '여',
-      address: '파주시 금촌동',
+      address: '서울시 강남구',
       phone: '010-1234-5678',
       status: 'active',
       riskLevel: 'high',
@@ -46,7 +46,7 @@ function Users() {
       name: '박철수',
       age: 82,
       gender: '남',
-      address: '파주시 문산읍',
+      address: '서울시 마포구',
       phone: '010-2345-6789',
       status: 'warning',
       riskLevel: 'medium',
@@ -64,7 +64,7 @@ function Users() {
       name: '이순자',
       age: 75,
       gender: '여',
-      address: '파주시 교하동',
+      address: '서울시 종로구',
       phone: '010-3456-7890',
       status: 'active',
       riskLevel: 'low',
@@ -82,7 +82,7 @@ function Users() {
       name: '최영수',
       age: 80,
       gender: '남',
-      address: '파주시 운정동',
+      address: '서울시 송파구',
       phone: '010-4567-8901',
       status: 'active',
       riskLevel: 'low',
@@ -100,7 +100,7 @@ function Users() {
       name: '정미란',
       age: 76,
       gender: '여',
-      address: '파주시 조리읍',
+      address: '서울시 서초구',
       phone: '010-5678-9012',
       status: 'active',
       riskLevel: 'medium',
@@ -118,7 +118,7 @@ function Users() {
       name: '강동원',
       age: 84,
       gender: '남',
-      address: '파주시 탄현면',
+      address: '서울시 영등포구',
       phone: '010-6789-0123',
       status: 'inactive',
       riskLevel: 'high',
@@ -136,7 +136,7 @@ function Users() {
       name: '한미숙',
       age: 73,
       gender: '여',
-      address: '파주시 월롱면',
+      address: '서울시 동작구',
       phone: '010-7890-1234',
       status: 'active',
       riskLevel: 'low',
@@ -154,7 +154,7 @@ function Users() {
       name: '오병호',
       age: 79,
       gender: '남',
-      address: '파주시 광탄면',
+      address: '서울시 관악구',
       phone: '010-8901-2345',
       status: 'active',
       riskLevel: 'medium',
@@ -383,7 +383,7 @@ function Users() {
             </div>
             <div className="user-details">
               <span className="user-name">{currentUser.name || '홍길동'}</span>
-              <span className="user-role">{currentUser.role || '파주시청 복지과'}</span>
+              <span className="user-role">{currentUser.role || '서울시청 복지과'}</span>
             </div>
             <button className="dropdown-toggle">
               <img src="/admin-ui/assets/icons/chevron-down.svg" alt="더보기" style={{ width: '12px', height: '12px' }} />

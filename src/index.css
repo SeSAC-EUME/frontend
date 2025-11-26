@@ -24,7 +24,7 @@
   --spacing-lg: clamp(1.5rem, 4vw, 2rem);
   --spacing-xl: clamp(2rem, 5vw, 3rem);
 
-  /* 반응형 터치 영역 (노인 친화) */
+  /* 반응형 터치 영역 (청년 친화) */
   --touch-target: clamp(44px, 10vw, 56px);
 
   /* 반응형 컨테이너 패딩 */

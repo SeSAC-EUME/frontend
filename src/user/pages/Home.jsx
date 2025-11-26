@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/user.css';
-import { API_ENDPOINTS } from '../../api/config';
-import axiosInstance from '../../api/axios';
-import { useTheme } from '../../contexts/ThemeContext';
+import '../styles/user.css';
+import { API_ENDPOINTS } from '../../shared/api/config';
+import axiosInstance from '../../shared/api/axios';
+import { useTheme } from '../../shared/contexts/ThemeContext';
 
 function Home() {
   const navigate = useNavigate();
