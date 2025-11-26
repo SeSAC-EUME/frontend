@@ -8,6 +8,10 @@ import React from 'react';
 import AdminLogin from './pages/Login';
 import AdminDashboard from './pages/Dashboard';
 import AdminUsers from './pages/Users';
+import AdminEmotionMonitor from './pages/EmotionMonitor';
+import AdminConversation from './pages/Conversation';
+import AdminReports from './pages/Reports';
+import AdminProfile from './pages/Profile';
 import AdminEmergency from './pages/Emergency';
 
 const adminRoutes = [
@@ -29,6 +33,22 @@ const adminRoutes = [
       {
         path: 'users',
         element: <AdminUsers />,
+      },
+      {
+        path: 'emotion-monitor',
+        element: <AdminEmotionMonitor />,
+      },
+      {
+        path: 'conversation',
+        element: <AdminConversation />,
+      },
+      {
+        path: 'reports',
+        element: <AdminReports />,
+      },
+      {
+        path: 'profile',
+        element: <AdminProfile />,
       },
       {
         path: 'emergency',

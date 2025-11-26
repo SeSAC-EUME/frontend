@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AdminLayout from '../components/AdminLayout';
 import '../styles/admin.css';
+import '../styles/admin-responsive.css';
+
+// 아이콘 import
+import downloadIcon from '../assets/icons/download.svg';
+import usersIcon from '../assets/icons/users.svg';
+import refreshCwIcon from '../assets/icons/refresh-cw.svg';
 
 function Users() {
   const navigate = useNavigate();
@@ -16,8 +23,6 @@ function Users() {
   const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const itemsPerPage = 10;
 
@@ -25,17 +30,17 @@ function Users() {
   const usersData = [
     {
       id: 1,
-      name: '김영희',
-      age: 78,
-      gender: '여',
+      name: '김민수',
+      age: 24,
+      gender: '남',
       address: '서울시 강남구',
       phone: '010-1234-5678',
       status: 'active',
       riskLevel: 'high',
       riskScore: 85,
-      lastActive: '2025-11-12 09:30',
+      lastActive: '2025-11-26 09:30',
       joinDate: '2025-10-01',
-      guardian: '김철수 (아들)',
+      guardian: '김영희 (모)',
       guardianPhone: '010-9876-5432',
       emotionStatus: '우울',
       conversationCount: 45,
@@ -43,17 +48,17 @@ function Users() {
     },
     {
       id: 2,
-      name: '박철수',
-      age: 82,
-      gender: '남',
+      name: '박지원',
+      age: 28,
+      gender: '여',
       address: '서울시 마포구',
       phone: '010-2345-6789',
       status: 'warning',
       riskLevel: 'medium',
       riskScore: 55,
-      lastActive: '2025-11-09 14:20',
+      lastActive: '2025-11-25 14:20',
       joinDate: '2025-09-15',
-      guardian: '박민지 (딸)',
+      guardian: '박철수 (부)',
       guardianPhone: '010-8765-4321',
       emotionStatus: '보통',
       conversationCount: 32,
@@ -61,17 +66,17 @@ function Users() {
     },
     {
       id: 3,
-      name: '이순자',
-      age: 75,
+      name: '이서연',
+      age: 22,
       gender: '여',
       address: '서울시 종로구',
       phone: '010-3456-7890',
       status: 'active',
       riskLevel: 'low',
       riskScore: 25,
-      lastActive: '2025-11-12 10:15',
+      lastActive: '2025-11-26 10:15',
       joinDate: '2025-10-20',
-      guardian: '이지훈 (아들)',
+      guardian: '이영수 (부)',
       guardianPhone: '010-7654-3210',
       emotionStatus: '좋음',
       conversationCount: 28,
@@ -79,17 +84,17 @@ function Users() {
     },
     {
       id: 4,
-      name: '최영수',
-      age: 80,
+      name: '최준호',
+      age: 31,
       gender: '남',
       address: '서울시 송파구',
       phone: '010-4567-8901',
       status: 'active',
       riskLevel: 'low',
       riskScore: 30,
-      lastActive: '2025-11-12 08:45',
+      lastActive: '2025-11-26 08:45',
       joinDate: '2025-09-01',
-      guardian: '최서연 (딸)',
+      guardian: '최미경 (모)',
       guardianPhone: '010-6543-2109',
       emotionStatus: '좋음',
       conversationCount: 52,
@@ -97,17 +102,17 @@ function Users() {
     },
     {
       id: 5,
-      name: '정미란',
-      age: 76,
+      name: '정수빈',
+      age: 26,
       gender: '여',
       address: '서울시 서초구',
       phone: '010-5678-9012',
       status: 'active',
       riskLevel: 'medium',
       riskScore: 60,
-      lastActive: '2025-11-11 16:30',
+      lastActive: '2025-11-25 16:30',
       joinDate: '2025-10-10',
-      guardian: '정우진 (아들)',
+      guardian: '정미란 (모)',
       guardianPhone: '010-5432-1098',
       emotionStatus: '보통',
       conversationCount: 38,
@@ -115,17 +120,17 @@ function Users() {
     },
     {
       id: 6,
-      name: '강동원',
-      age: 84,
+      name: '강태현',
+      age: 29,
       gender: '남',
       address: '서울시 영등포구',
       phone: '010-6789-0123',
       status: 'inactive',
       riskLevel: 'high',
       riskScore: 90,
-      lastActive: '2025-11-05 11:20',
+      lastActive: '2025-11-20 11:20',
       joinDate: '2025-08-15',
-      guardian: '강혜진 (딸)',
+      guardian: '강동원 (부)',
       guardianPhone: '010-4321-0987',
       emotionStatus: '매우 우울',
       conversationCount: 15,
@@ -133,17 +138,17 @@ function Users() {
     },
     {
       id: 7,
-      name: '한미숙',
-      age: 73,
+      name: '한지우',
+      age: 23,
       gender: '여',
       address: '서울시 동작구',
       phone: '010-7890-1234',
       status: 'active',
       riskLevel: 'low',
       riskScore: 20,
-      lastActive: '2025-11-12 09:00',
+      lastActive: '2025-11-26 09:00',
       joinDate: '2025-10-25',
-      guardian: '한준호 (아들)',
+      guardian: '한미숙 (모)',
       guardianPhone: '010-3210-9876',
       emotionStatus: '매우 좋음',
       conversationCount: 22,
@@ -151,17 +156,17 @@ function Users() {
     },
     {
       id: 8,
-      name: '오병호',
-      age: 79,
+      name: '오성민',
+      age: 33,
       gender: '남',
       address: '서울시 관악구',
       phone: '010-8901-2345',
       status: 'active',
       riskLevel: 'medium',
       riskScore: 50,
-      lastActive: '2025-11-11 19:45',
+      lastActive: '2025-11-25 19:45',
       joinDate: '2025-09-20',
-      guardian: '오수진 (딸)',
+      guardian: '오병호 (부)',
       guardianPhone: '010-2109-8765',
       emotionStatus: '보통',
       conversationCount: 41,
@@ -317,14 +322,6 @@ function Users() {
     alert(`${selectedUsers.size}명의 사용자에 대한 일괄 작업을 수행합니다.\n이 기능은 추후 구현됩니다.`);
   };
 
-  const handleLogout = () => {
-    if (window.confirm('로그아웃 하시겠습니까?')) {
-      localStorage.removeItem('eume_admin_user');
-      localStorage.removeItem('eume_admin_session_expiry');
-      navigate('/admin/login');
-    }
-  };
-
   const getStatusText = (status) => {
     const statusMap = {
       'active': '활성',
@@ -357,108 +354,14 @@ function Users() {
     return '방금 전';
   };
 
-  const currentUser = JSON.parse(localStorage.getItem('eume_admin_user') || '{}');
-
   return (
-    <div className="admin-page">
-      {/* 상단 헤더 */}
-      <header className="admin-header">
-        <div className="header-left">
-          <button className="menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <img src="/admin-ui/assets/icons/menu.svg" alt="메뉴" style={{ width: '20px', height: '20px' }} />
-          </button>
-          <img src="/shared/assets/logo2.png" alt="서비스 로고" className="header-logo" style={{ height: '32px', width: 'auto' }} />
-          <h1 className="system-title">이음이 관리 시스템</h1>
-        </div>
-
-        <div className="header-right">
-          <button className="header-button notification-button" onClick={() => alert('알림 기능은 추후 구현됩니다.')}>
-            <img src="/admin-ui/assets/icons/bell.svg" alt="알림" style={{ width: '20px', height: '20px' }} />
-            <span className="notification-badge">5</span>
-          </button>
-
-          <div className="user-info" onClick={() => setShowUserDropdown(!showUserDropdown)}>
-            <div className="user-avatar" style={{ background: '#E0E7FF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
-              <img src="/admin-ui/assets/icons/user.svg" alt="사용자" style={{ width: '16px', height: '16px', stroke: '#667EEA' }} />
-            </div>
-            <div className="user-details">
-              <span className="user-name">{currentUser.name || '홍길동'}</span>
-              <span className="user-role">{currentUser.role || '서울시청 복지과'}</span>
-            </div>
-            <button className="dropdown-toggle">
-              <img src="/admin-ui/assets/icons/chevron-down.svg" alt="더보기" style={{ width: '12px', height: '12px' }} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* 사이드바 네비게이션 */}
-      <nav className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`} id="adminSidebar">
-        <ul className="sidebar-menu">
-          <li className="menu-item">
-            <a href="/admin/dashboard" onClick={(e) => { e.preventDefault(); navigate('/admin/dashboard'); }}>
-              <img src="/admin-ui/assets/icons/chart-bar.svg" alt="대시보드" className="menu-icon" />
-              <span>대시보드</span>
-            </a>
-          </li>
-          <li className="menu-item active">
-            <a href="/admin/users" onClick={(e) => { e.preventDefault(); navigate('/admin/users'); }}>
-              <img src="/admin-ui/assets/icons/users.svg" alt="이용자 관리" className="menu-icon" />
-              <span>이용자 관리</span>
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="/admin/emotion-monitor" onClick={(e) => { e.preventDefault(); navigate('/admin/emotion-monitor'); }}>
-              <img src="/admin-ui/assets/icons/heart.svg" alt="감정 모니터링" className="menu-icon" />
-              <span>감정 모니터링</span>
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="/admin/conversation" onClick={(e) => { e.preventDefault(); navigate('/admin/conversation'); }}>
-              <img src="/admin-ui/assets/icons/message-circle.svg" alt="대화 분석" className="menu-icon" />
-              <span>대화 분석</span>
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="/admin/emergency" onClick={(e) => { e.preventDefault(); navigate('/admin/emergency'); }}>
-              <img src="/admin-ui/assets/icons/triangle-alert.svg" alt="긴급 상황" className="menu-icon" />
-              <span>긴급 상황</span>
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="/admin/reports" onClick={(e) => { e.preventDefault(); navigate('/admin/reports'); }}>
-              <img src="/admin-ui/assets/icons/file-text.svg" alt="보고서" className="menu-icon" />
-              <span>보고서</span>
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="/admin/settings" onClick={(e) => { e.preventDefault(); navigate('/admin/settings'); }}>
-              <img src="/admin-ui/assets/icons/settings.svg" alt="시스템 설정" className="menu-icon" />
-              <span>시스템 설정</span>
-            </a>
-          </li>
-        </ul>
-
-        <div className="sidebar-footer">
-          <a href="#" className="footer-link">
-            <img src="/admin-ui/assets/icons/info.svg" alt="도움말" className="menu-icon" />
-            <span>도움말</span>
-          </a>
-          <a href="#" className="footer-link logout-link" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
-            <img src="/admin-ui/assets/icons/log-out.svg" alt="로그아웃" className="menu-icon" />
-            <span>로그아웃</span>
-          </a>
-        </div>
-      </nav>
-
-      {/* 메인 콘텐츠 영역 */}
-      <main className="admin-main">
+    <AdminLayout>
         {/* 페이지 헤더 */}
         <div className="page-header">
           <h2>이용자 관리</h2>
           <div className="page-actions">
             <button className="action-button" onClick={exportUsers}>
-              <img src="/admin-ui/assets/icons/download.svg" alt="내보내기" className="button-icon" />
+              <img src={downloadIcon} alt="내보내기" className="button-icon" />
               Excel 내보내기
             </button>
             <button className="action-button primary" onClick={bulkAction}>
@@ -471,7 +374,7 @@ function Users() {
         <div className="search-filter-section">
           <div className="search-bar">
             <div className="search-input-wrapper">
-              <img src="/admin-ui/assets/icons/users.svg" alt="검색" className="search-icon" />
+              <img src={usersIcon} alt="검색" className="search-icon" />
               <input
                 type="text"
                 className="search-input"
@@ -511,10 +414,10 @@ function Users() {
               onChange={(e) => setFilters({ ...filters, age: e.target.value })}
             >
               <option value="all">전체 연령</option>
-              <option value="60-69">60대</option>
-              <option value="70-79">70대</option>
-              <option value="80-89">80대</option>
-              <option value="90+">90대 이상</option>
+              <option value="10-19">10대</option>
+              <option value="20-29">20대</option>
+              <option value="30-39">30대</option>
+              <option value="40+">40대 이상</option>
             </select>
           </div>
         </div>
@@ -528,13 +431,14 @@ function Users() {
             </div>
             <div className="table-actions">
               <button className="table-action-btn" onClick={() => window.location.reload()}>
-                <img src="/admin-ui/assets/icons/refresh-cw.svg" alt="새로고침" />
+                <img src={refreshCwIcon} alt="새로고침" />
                 새로고침
               </button>
             </div>
           </div>
 
-          <table className="users-table">
+          <div className="table-responsive">
+            <table className="users-table">
             <thead>
               <tr>
                 <th className="checkbox-cell">
@@ -554,7 +458,7 @@ function Users() {
                 <tr>
                   <td colSpan="8" className="empty-state">
                     <div className="empty-icon">
-                      <img src="/admin-ui/assets/icons/users.svg" alt="사용자 없음" />
+                      <img src={usersIcon} alt="사용자 없음" />
                     </div>
                     <div className="empty-title">검색 결과가 없습니다</div>
                     <div className="empty-description">다른 검색어나 필터를 시도해보세요</div>
@@ -612,6 +516,7 @@ function Users() {
               )}
             </tbody>
           </table>
+          </div>
 
           {/* 페이지네이션 */}
           <div className="pagination">
@@ -645,30 +550,6 @@ function Users() {
             </div>
           </div>
         </div>
-      </main>
-
-      {/* 사용자 메뉴 드롭다운 */}
-      {showUserDropdown && (
-        <div className="user-dropdown show" onClick={() => setShowUserDropdown(false)}>
-          <a href="#" className="dropdown-item">
-            <img src="/admin-ui/assets/icons/user.svg" alt="프로필" style={{ width: '16px', height: '16px' }} />
-            <span>내 프로필</span>
-          </a>
-          <a href="#" className="dropdown-item">
-            <img src="/admin-ui/assets/icons/lock.svg" alt="비밀번호" style={{ width: '16px', height: '16px' }} />
-            <span>비밀번호 변경</span>
-          </a>
-          <a href="#" className="dropdown-item">
-            <img src="/admin-ui/assets/icons/settings.svg" alt="설정" style={{ width: '16px', height: '16px' }} />
-            <span>계정 설정</span>
-          </a>
-          <hr className="dropdown-divider" />
-          <a href="#" className="dropdown-item logout" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
-            <img src="/admin-ui/assets/icons/log-out.svg" alt="로그아웃" style={{ width: '16px', height: '16px' }} />
-            <span>로그아웃</span>
-          </a>
-        </div>
-      )}
 
       {/* 사용자 상세 정보 모달 */}
       {showUserModal && selectedUserDetail && (
@@ -774,7 +655,7 @@ function Users() {
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   );
 }
 
