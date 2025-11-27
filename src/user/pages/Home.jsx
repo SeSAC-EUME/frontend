@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import '../styles/user.css';
 import { useTheme } from '../../shared/contexts/ThemeContext';
+import Header from '../components/Header';
+import Sidebar from '../components/Sidebar';
 
 const pinnedRooms = [
   {
@@ -62,9 +63,8 @@ const emptyUser = {
 };
 
 function Home() {
-  const navigate = useNavigate();
   const { theme: currentTheme } = useTheme();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [messagesByRoom, setMessagesByRoom] = useState(initialMessages);
   const [isStreamingByRoom, setIsStreamingByRoom] = useState({});
@@ -190,110 +190,24 @@ function Home() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('eume_user_token');
-    localStorage.removeItem('eume_onboarding_complete');
-    localStorage.removeItem('eume_visited');
-    setIsUserMenuOpen(false);
-    navigate('/user/login');
-  };
-
-  const handleOpenSettings = () => {
-    navigate('/user/settings');
-    setIsUserMenuOpen(false);
-  };
-
   const hasMessages = currentMessages.length > 0;
 
   return (
     <div className={`theme-${currentTheme} home-page`}>
-      <div className={`chat-sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="sidebar-title">ChatGPT</div>
-          <button className="sidebar-close-btn" onClick={toggleSidebar} aria-label="사이드바 닫기">
-            ×
-          </button>
-        </div>
+      <Sidebar
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={toggleSidebar}
+        selectedChatId={selectedChatId}
+        onActionClick={handleActionClick}
+        chatHistory={chatHistory}
+        onSelectRoom={handleSelectRoom}
+        userInfo={userInfo}
+        isUserMenuOpen={isUserMenuOpen}
+        setIsUserMenuOpen={setIsUserMenuOpen}
+      />
 
-        <div className="sidebar-actions">
-          {pinnedRooms.map((room) => (
-            <button
-              key={room.id}
-              className={`sidebar-action ${selectedChatId === room.id ? 'active' : ''}`}
-              onClick={() => handleActionClick(room.id)}
-            >
-              <span className="action-icon" aria-hidden>
-                {room.icon}
-              </span>
-              <div className="action-text">
-                <div className="action-title">
-                  {room.title}
-                  {room.badge ? <span className="ieum-badge">{room.badge}</span> : null}
-                </div>
-                <div className="action-desc">{room.description}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        <div className="chat-list-section">
-          <div className="chat-section-title">채팅 목록</div>
-          <div className="chat-rooms-list">
-            {chatHistory.map((room) => (
-              <div
-                key={room.id}
-                className={`chat-room-item ${selectedChatId === room.id ? 'active' : ''}`}
-                onClick={() => handleSelectRoom(room.id)}
-              >
-                <div className="room-title">{room.title}</div>
-                <div className="room-timestamp">{room.updatedAt}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="sidebar-footer">
-          <div
-            className="sidebar-profile"
-            onClick={() => setIsUserMenuOpen((prev) => !prev)}
-            style={{ cursor: 'pointer', position: 'relative' }}
-          >
-            <div className="profile-avatar">
-              {userInfo.profileImage ? (
-                <img src={userInfo.profileImage} alt="프로필" />
-              ) : (
-                <span>{userInfo.userName?.[0] || '유'}</span>
-              )}
-            </div>
-            <div className="profile-meta">
-              <div className="profile-name">{userInfo.userName}</div>
-              <div className="profile-email">{userInfo.email || '이메일 미등록'}</div>
-            </div>
-            {isUserMenuOpen ? (
-              <div className="user-menu-dropdown">
-                <button className="user-menu-item" onClick={handleOpenSettings}>
-                  설정
-                </button>
-                <button className="user-menu-item" onClick={handleLogout}>
-                  로그아웃
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      <div className="chat-main" style={{ marginLeft: isSidebarOpen ? 320 : 0 }}>
-        <div className="chat-main-header">
-          <button className="menu-btn" onClick={toggleSidebar} aria-label="사이드바 열기">
-            ☰
-          </button>
-          <div className="header-center">
-            <h1 className="chat-title">ChatGPT</h1>
-            <p className="chat-subtitle">무엇이든 물어보세요</p>
-          </div>
-        </div>
+      <div className="chat-main" style={{ marginLeft: isSidebarOpen ? 320 : 60 }}>
+        <Header isSidebarOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
 
         <div className="chat-messages" ref={messagesContainerRef}>
           {!hasMessages ? (
