@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AdminLayout from '../components/AdminLayout';
 import '../styles/admin.css';
+import '../styles/admin-responsive.css';
 
 function Emergency() {
   const navigate = useNavigate();
   const [currentFilter, setCurrentFilter] = useState('all');
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [emergencies, setEmergencies] = useState([]);
   const [activeUsers, setActiveUsers] = useState([]);
   const [realtimeStats, setRealtimeStats] = useState({
@@ -200,14 +200,6 @@ function Emergency() {
     }
   };
 
-  const handleLogout = () => {
-    if (window.confirm('로그아웃 하시겠습니까?')) {
-      localStorage.removeItem('eume_admin_user');
-      localStorage.removeItem('eume_admin_session_expiry');
-      navigate('/admin/login');
-    }
-  };
-
   const getStatusText = (status) => {
     const statusMap = {
       'new': '신규',
@@ -241,102 +233,8 @@ function Emergency() {
     return '방금 전';
   };
 
-  const currentUser = JSON.parse(localStorage.getItem('eume_admin_user') || '{}');
-
   return (
-    <div className="admin-page">
-      {/* 상단 헤더 */}
-      <header className="admin-header">
-        <div className="header-left">
-          <button className="menu-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <img src="/admin-ui/assets/icons/menu.svg" alt="메뉴" style={{ width: '20px', height: '20px' }} />
-          </button>
-          <img src="/shared/assets/logo2.png" alt="서비스 로고" className="header-logo" style={{ height: '32px', width: 'auto' }} />
-          <h1 className="system-title">이음이 관리 시스템</h1>
-        </div>
-
-        <div className="header-right">
-          <button className="header-button notification-button" onClick={() => alert('알림 기능은 추후 구현됩니다.')}>
-            <img src="/admin-ui/assets/icons/bell.svg" alt="알림" style={{ width: '20px', height: '20px' }} />
-            <span className="notification-badge">5</span>
-          </button>
-
-          <div className="user-info" onClick={() => setShowUserDropdown(!showUserDropdown)}>
-            <div className="user-avatar" style={{ background: '#E0E7FF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}>
-              <img src="/admin-ui/assets/icons/user.svg" alt="사용자" style={{ width: '16px', height: '16px', stroke: '#667EEA' }} />
-            </div>
-            <div className="user-details">
-              <span className="user-name">{currentUser.name || '홍길동'}</span>
-              <span className="user-role">{currentUser.role || '서울시청 복지과'}</span>
-            </div>
-            <button className="dropdown-toggle">
-              <img src="/admin-ui/assets/icons/chevron-down.svg" alt="더보기" style={{ width: '12px', height: '12px' }} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* 사이드바 네비게이션 */}
-      <nav className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <ul className="sidebar-menu">
-          <li className="menu-item">
-            <a href="/admin/dashboard" onClick={(e) => { e.preventDefault(); navigate('/admin/dashboard'); }}>
-              <img src="/admin-ui/assets/icons/chart-bar.svg" alt="대시보드" className="menu-icon" />
-              <span>대시보드</span>
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="/admin/users" onClick={(e) => { e.preventDefault(); navigate('/admin/users'); }}>
-              <img src="/admin-ui/assets/icons/users.svg" alt="이용자 관리" className="menu-icon" />
-              <span>이용자 관리</span>
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="/admin/emotion-monitor" onClick={(e) => { e.preventDefault(); navigate('/admin/emotion-monitor'); }}>
-              <img src="/admin-ui/assets/icons/heart.svg" alt="감정 모니터링" className="menu-icon" />
-              <span>감정 모니터링</span>
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="/admin/conversation" onClick={(e) => { e.preventDefault(); navigate('/admin/conversation'); }}>
-              <img src="/admin-ui/assets/icons/message-circle.svg" alt="대화 분석" className="menu-icon" />
-              <span>대화 분석</span>
-            </a>
-          </li>
-          <li className="menu-item active">
-            <a href="/admin/emergency" onClick={(e) => { e.preventDefault(); navigate('/admin/emergency'); }}>
-              <img src="/admin-ui/assets/icons/triangle-alert.svg" alt="긴급 상황" className="menu-icon" />
-              <span>긴급 상황</span>
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="/admin/reports" onClick={(e) => { e.preventDefault(); navigate('/admin/reports'); }}>
-              <img src="/admin-ui/assets/icons/file-text.svg" alt="보고서" className="menu-icon" />
-              <span>보고서</span>
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="/admin/settings" onClick={(e) => { e.preventDefault(); navigate('/admin/settings'); }}>
-              <img src="/admin-ui/assets/icons/settings.svg" alt="시스템 설정" className="menu-icon" />
-              <span>시스템 설정</span>
-            </a>
-          </li>
-        </ul>
-
-        <div className="sidebar-footer">
-          <a href="#" className="footer-link">
-            <img src="/admin-ui/assets/icons/info.svg" alt="도움말" className="menu-icon" />
-            <span>도움말</span>
-          </a>
-          <a href="#" className="footer-link logout-link" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
-            <img src="/admin-ui/assets/icons/log-out.svg" alt="로그아웃" className="menu-icon" />
-            <span>로그아웃</span>
-          </a>
-        </div>
-      </nav>
-
-      {/* 메인 콘텐츠 영역 */}
-      <main className="admin-main">
+    <AdminLayout>
         {/* 페이지 헤더 */}
         <div className="page-header">
           <div>
@@ -515,31 +413,7 @@ function Emergency() {
             ))}
           </div>
         </div>
-      </main>
-
-      {/* 사용자 메뉴 드롭다운 */}
-      {showUserDropdown && (
-        <div className="user-dropdown show" onClick={() => setShowUserDropdown(false)}>
-          <a href="#" className="dropdown-item">
-            <img src="/admin-ui/assets/icons/user.svg" alt="프로필" style={{ width: '16px', height: '16px' }} />
-            <span>내 프로필</span>
-          </a>
-          <a href="#" className="dropdown-item">
-            <img src="/admin-ui/assets/icons/lock.svg" alt="비밀번호" style={{ width: '16px', height: '16px' }} />
-            <span>비밀번호 변경</span>
-          </a>
-          <a href="#" className="dropdown-item">
-            <img src="/admin-ui/assets/icons/settings.svg" alt="설정" style={{ width: '16px', height: '16px' }} />
-            <span>계정 설정</span>
-          </a>
-          <hr className="dropdown-divider" />
-          <a href="#" className="dropdown-item logout" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
-            <img src="/admin-ui/assets/icons/log-out.svg" alt="로그아웃" style={{ width: '16px', height: '16px' }} />
-            <span>로그아웃</span>
-          </a>
-        </div>
-      )}
-    </div>
+    </AdminLayout>
   );
 }
 

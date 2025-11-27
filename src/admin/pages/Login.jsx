@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/admin.css';
-import logo from '../../shared/assets/logo.png';
+import logo from '../../shared/assets/logo.svg';
 import lockIcon from '../assets/icons/lock.svg';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
@@ -9,7 +9,6 @@ import axiosInstance from '../../shared/api/axios';
 function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    organization: '',
     username: '',
     password: '',
     rememberMe: false
@@ -59,11 +58,6 @@ function Login() {
     e.preventDefault();
 
     // 유효성 검사
-    if (!formData.organization) {
-      setErrorMessage('소속 기관을 선택해주세요.');
-      return;
-    }
-
     if (!formData.username.trim()) {
       setErrorMessage('아이디를 입력해주세요.');
       return;
@@ -100,8 +94,7 @@ function Login() {
         firstLogin: result.firstLogin,
         userType: result.userType,
         profileImage: result.profileImage,
-        backgroundTheme: result.backgroundTheme,
-        organization: formData.organization
+        backgroundTheme: result.backgroundTheme
       };
       localStorage.setItem('user', JSON.stringify(userData));
 
@@ -130,8 +123,7 @@ function Login() {
     const loginHistory = JSON.parse(localStorage.getItem('eume_admin_login_history') || '[]');
     loginHistory.push({
       username: userData.username,
-      time: userData.loginTime,
-      organization: userData.organization
+      time: userData.loginTime
     });
     // 최근 10개만 유지
     if (loginHistory.length > 10) {
@@ -165,24 +157,6 @@ function Login() {
           )}
 
           <form className="login-form" onSubmit={handleSubmit}>
-            {/* 기관 선택 */}
-            <div className="form-group">
-              <label htmlFor="organization">소속 기관</label>
-              <select
-                id="organization"
-                name="organization"
-                value={formData.organization}
-                onChange={handleChange}
-                required
-              >
-                <option value="">기관을 선택하세요</option>
-                <option value="seoul-city">서울시청</option>
-                <option value="welfare-center">서울시 청년복지관</option>
-                <option value="health-center">서울시 보건소</option>
-                <option value="social-service">서울시 사회복지과</option>
-              </select>
-            </div>
-
             {/* 아이디 입력 */}
             <div className="form-group">
               <label htmlFor="username">아이디</label>
@@ -237,6 +211,55 @@ function Login() {
               disabled={isLoading}
             >
               {isLoading ? '로그인 중...' : '로그인'}
+            </button>
+
+            {/* 회원가입 버튼 */}
+            <button
+              type="button"
+              className="login-button"
+              style={{
+                marginTop: '8px',
+                backgroundColor: '#10B981',
+                border: '1px solid #10B981'
+              }}
+              onClick={() => {
+                alert('회원가입 기능은 준비 중입니다.');
+              }}
+            >
+              회원가입
+            </button>
+
+            {/* 개발용 로그인 버튼 */}
+            <button
+              type="button"
+              className="login-button"
+              style={{
+                marginTop: '8px',
+                backgroundColor: '#6c757d',
+                border: '1px solid #6c757d'
+              }}
+              onClick={() => {
+                // 개발용 더미 데이터 저장
+                const devUserData = {
+                  userId: 'dev-admin-001',
+                  loginId: 'admin',
+                  name: '개발자',
+                  email: 'dev@admin.com',
+                  groupId: 'admin-group',
+                  firstLogin: false,
+                  userType: 'ADMIN',
+                  profileImage: null,
+                  backgroundTheme: 'default'
+                };
+                localStorage.setItem('user', JSON.stringify(devUserData));
+                localStorage.setItem('token', 'dev-token-12345');
+                localStorage.setItem('eume_admin_user', JSON.stringify(devUserData));
+                const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
+                localStorage.setItem('eume_admin_session_expiry', expiryTime.toString());
+                navigate('/admin/dashboard');
+              }}
+            >
+              개발 로그인
             </button>
 
             {/* 보안 안내 */}
