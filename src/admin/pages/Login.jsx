@@ -213,12 +213,28 @@ function Login() {
               {isLoading ? '로그인 중...' : '로그인'}
             </button>
 
+            {/* 회원가입 버튼 */}
+            <button
+              type="button"
+              className="login-button"
+              style={{
+                marginTop: '8px',
+                backgroundColor: '#10B981',
+                border: '1px solid #10B981'
+              }}
+              onClick={() => {
+                alert('회원가입 기능은 준비 중입니다.');
+              }}
+            >
+              회원가입
+            </button>
+
             {/* 개발용 로그인 버튼 */}
             <button
               type="button"
               className="login-button"
               style={{
-                marginTop: '10px',
+                marginTop: '8px',
                 backgroundColor: '#6c757d',
                 border: '1px solid #6c757d'
               }}
