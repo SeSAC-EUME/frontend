@@ -26,6 +26,7 @@ function Users() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isLoadingUserDetail, setIsLoadingUserDetail] = useState(false);
 
   const itemsPerPage = 10;
 
@@ -291,11 +292,28 @@ function Users() {
     setSelectAll(newSelected.size === pageUsers.length);
   };
 
-  const viewUserDetail = (userId) => {
-    const user = usersData.find(u => u.id === userId);
-    setSelectedUserDetail(user);
+  const viewUserDetail = async (userId) => {
+    setIsLoadingUserDetail(true);
     setShowUserModal(true);
     document.body.style.overflow = 'hidden';
+
+    try {
+      // API에서 실시간 사용자 상세 정보 조회
+      const userDetail = await axiosInstance.get(API_ENDPOINTS.ADMIN.USER_DETAIL(userId));
+      setSelectedUserDetail(userDetail);
+    } catch (error) {
+      console.error('사용자 상세 조회 오류:', error);
+      // API 실패 시 로컬 데이터 사용 (폴백)
+      const user = usersData.find(u => u.id === userId);
+      if (user) {
+        setSelectedUserDetail(user);
+      } else {
+        alert('사용자 정보를 불러올 수 없습니다.');
+        closeUserDetailModal();
+      }
+    } finally {
+      setIsLoadingUserDetail(false);
+    }
   };
 
   const closeUserDetailModal = () => {
@@ -577,14 +595,28 @@ function Users() {
         </div>
 
       {/* 사용자 상세 정보 모달 */}
-      {showUserModal && selectedUserDetail && (
+      {showUserModal && (
         <div className="modal-overlay" style={{ display: 'flex' }} onClick={(e) => { if (e.target.className === 'modal-overlay') closeUserDetailModal(); }}>
           <div className="modal-container" style={{ maxWidth: '1200px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
-              <h3 className="modal-title">{selectedUserDetail.name} 님의 상세 정보</h3>
+              <h3 className="modal-title">
+                {isLoadingUserDetail ? '정보 불러오는 중...' : `${selectedUserDetail?.name || ''} 님의 상세 정보`}
+              </h3>
               <button className="modal-close" onClick={closeUserDetailModal}>×</button>
             </div>
             <div className="modal-body">
+              {isLoadingUserDetail ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--admin-text-light)' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '12px' }}>⏳</div>
+                  <div>사용자 정보를 불러오는 중...</div>
+                </div>
+              ) : !selectedUserDetail ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--admin-text-light)' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '12px' }}>❌</div>
+                  <div>사용자 정보를 불러올 수 없습니다</div>
+                </div>
+              ) : (
+                <>
               {/* 기본 정보 */}
               <div style={{ background: 'var(--admin-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
                 <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--admin-text-dark)' }}>기본 정보</h4>
@@ -672,10 +704,14 @@ function Users() {
                   </div>
                 </div>
               </div>
+                </>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={closeUserDetailModal}>닫기</button>
-              <button className="btn-primary" onClick={() => callGuardian(selectedUserDetail.id)}>보호자 연락</button>
+              {selectedUserDetail && (
+                <button className="btn-primary" onClick={() => callGuardian(selectedUserDetail.id)}>보호자 연락</button>
+              )}
             </div>
           </div>
         </div>

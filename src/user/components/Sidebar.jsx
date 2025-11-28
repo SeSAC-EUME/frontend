@@ -57,6 +57,14 @@ function Sidebar({
     localStorage.removeItem(STORAGE_KEYS.USER_VISITED);
     localStorage.removeItem(STORAGE_KEYS.OAUTH_USER);
 
+    // OAuth 임시 데이터 삭제
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_EMAIL);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_REALNAME);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_USERNAME);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_BIRTHDATE);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_GENDER);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_PHONE);
+
     setIsUserMenuOpen(false);
     navigate('/user/login');
   };

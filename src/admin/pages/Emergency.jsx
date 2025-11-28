@@ -17,7 +17,8 @@ function Emergency() {
   // 데이터 초기화 (인증은 AdminLayout에서 처리)
   useEffect(() => {
     initializeData();
-    startRealtimeUpdates();
+    const cleanup = startRealtimeUpdates();
+    return cleanup;
   }, []);
 
   const initializeData = () => {

@@ -21,7 +21,7 @@ function Splash() {
       }
 
       // 로그인 됨 + 온보딩 미완료 -> 온보딩 페이지
-      if (!onboardingComplete && !hasVisited) {
+      if (!onboardingComplete) {
         navigate('/user/onboarding-1');
         return;
       }

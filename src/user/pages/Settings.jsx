@@ -11,7 +11,7 @@ import { toBackendTheme } from '../../shared/utils/themeMapper';
 
 function Settings() {
   const navigate = useNavigate();
-  const { theme: currentTheme } = useTheme();
+  const { theme: currentTheme, setTheme } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [userInfo, setUserInfo] = useState({
@@ -159,6 +159,10 @@ function Settings() {
   // 테마 적용 (백엔드 동기화 포함)
   const applyTheme = async () => {
     const themeValue = selectedTheme;
+
+    // ThemeContext 업데이트 (다른 화면 즉시 반영)
+    setTheme(themeValue);
+
     const body = document.body;
     body.className = body.className.replace(/theme-\w+/g, '').trim();
     body.classList.add(`theme-${themeValue}`);
@@ -234,6 +238,73 @@ function Settings() {
     }
   };
 
+  // 계정 비활성화
+  const handleDeactivate = async () => {
+    if (!window.confirm('계정을 비활성화하시겠습니까?\n언제든 다시 로그인하여 활성화할 수 있습니다.')) {
+      return;
+    }
+
+    try {
+      await axiosInstance.post(API_ENDPOINTS.USER.DEACTIVATE);
+      alert('계정이 비활성화되었습니다.');
+      // 로그아웃 처리
+      performLogout();
+    } catch (error) {
+      console.error('계정 비활성화 오류:', error);
+      if (error.response?.status === 409) {
+        alert('이미 비활성화된 계정입니다.');
+      } else {
+        alert('계정 비활성화 중 오류가 발생했습니다.');
+      }
+    }
+  };
+
+  // 회원 탈퇴
+  const handleWithdraw = async () => {
+    const confirmMessage = '정말 탈퇴하시겠습니까?\n\n모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.';
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    // 2차 확인
+    const finalConfirm = window.prompt('탈퇴를 진행하려면 "탈퇴합니다"를 입력해주세요.');
+    if (finalConfirm !== '탈퇴합니다') {
+      alert('입력이 일치하지 않아 탈퇴가 취소되었습니다.');
+      return;
+    }
+
+    try {
+      await axiosInstance.post(API_ENDPOINTS.USER.WITHDRAW);
+      alert('회원 탈퇴가 완료되었습니다. 이용해주셔서 감사합니다.');
+      // 모든 로컬 데이터 삭제 후 로그인 페이지로
+      performLogout();
+    } catch (error) {
+      console.error('회원 탈퇴 오류:', error);
+      alert('회원 탈퇴 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 로컬 데이터 정리 및 로그인 페이지로 이동
+  const performLogout = () => {
+    // localStorage 정리
+    localStorage.removeItem(STORAGE_KEYS.USER_INFO);
+    localStorage.removeItem(STORAGE_KEYS.USER_THEME);
+    localStorage.removeItem(STORAGE_KEYS.USER_ONBOARDING);
+    localStorage.removeItem(STORAGE_KEYS.USER_VISITED);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_USER);
+    localStorage.removeItem('eume_settings');
+
+    // OAuth 임시 데이터 삭제
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_EMAIL);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_REALNAME);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_USERNAME);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_BIRTHDATE);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_GENDER);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_PHONE);
+
+    navigate('/user/login');
+  };
+
   // 로그아웃
   const logout = async () => {
     if (window.confirm('정말 로그아웃 하시겠습니까?')) {
@@ -252,6 +323,14 @@ function Settings() {
       localStorage.removeItem(STORAGE_KEYS.USER_VISITED);
       localStorage.removeItem(STORAGE_KEYS.OAUTH_USER);
       localStorage.removeItem('eume_settings');
+
+      // OAuth 임시 데이터 삭제
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_EMAIL);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_REALNAME);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_USERNAME);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_BIRTHDATE);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_GENDER);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_PHONE);
 
       showToast('로그아웃되었습니다');
       setTimeout(() => {
@@ -430,12 +509,52 @@ function Settings() {
               </div>
             </section>
 
-            {/* 로그아웃 버튼 */}
-            <div className="logout-container">
-              <button className="logout-button" onClick={logout}>
-                로그아웃
-              </button>
-            </div>
+            {/* 계정 관리 */}
+            <section className="settings-group">
+              <h3 className="group-title">
+                <span className="title-icon">👤</span>
+                계정 관리
+              </h3>
+
+              {/* 로그아웃 */}
+              <div className="setting-item">
+                <div className="setting-info">
+                  <h4 className="setting-title">로그아웃</h4>
+                  <p className="setting-desc">현재 계정에서 로그아웃합니다</p>
+                </div>
+                <div className="setting-control">
+                  <button className="setting-button" onClick={logout}>
+                    로그아웃
+                  </button>
+                </div>
+              </div>
+
+              {/* 계정 비활성화 */}
+              <div className="setting-item">
+                <div className="setting-info">
+                  <h4 className="setting-title">계정 비활성화</h4>
+                  <p className="setting-desc">계정을 일시적으로 비활성화합니다. 언제든 다시 로그인하여 활성화할 수 있습니다.</p>
+                </div>
+                <div className="setting-control">
+                  <button className="setting-button warning" onClick={handleDeactivate}>
+                    비활성화
+                  </button>
+                </div>
+              </div>
+
+              {/* 회원 탈퇴 */}
+              <div className="setting-item">
+                <div className="setting-info">
+                  <h4 className="setting-title">회원 탈퇴</h4>
+                  <p className="setting-desc">모든 데이터가 삭제되며 복구할 수 없습니다.</p>
+                </div>
+                <div className="setting-control">
+                  <button className="setting-button danger" onClick={handleWithdraw}>
+                    탈퇴하기
+                  </button>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       </div>

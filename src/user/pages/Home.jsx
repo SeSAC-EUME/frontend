@@ -76,6 +76,7 @@ function Home() {
   const [selectedChatId, setSelectedChatId] = useState('ieum-talk');
   const [userInfo, setUserInfo] = useState(emptyUser);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [chatListId, setChatListId] = useState(null);
   const messagesContainerRef = useRef(null);
 
   // 사용자 정보 및 채팅방 초기화
@@ -102,6 +103,10 @@ function Home() {
       const response = await axiosRaw.post(API_ENDPOINTS.EUME_CHAT.CREATE);
       if (response.status === 201) {
         console.log('Eume 채팅방 생성:', response.data);
+        // 새로 생성된 채팅방 ID 저장
+        if (response.data?.id) {
+          setChatListId(response.data.id);
+        }
       }
     } catch (error) {
       if (error.response?.status === 409) {
@@ -119,8 +124,29 @@ function Home() {
     try {
       const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
       console.log('기존 채팅 정보:', chatInfo);
+
+      // 채팅방 ID 저장
+      if (chatInfo.id) {
+        setChatListId(chatInfo.id);
+      }
+
       // 채팅 내역이 있으면 메시지 상태에 반영
-      // 백엔드 응답 구조에 따라 추가 구현 필요
+      if (chatInfo.contents && chatInfo.contents.length > 0) {
+        const loadedMessages = chatInfo.contents.map((content, index) => ({
+          id: `loaded-${content.id || index}`,
+          text: content.messageContent,
+          sender: content.messageType === 'USER' ? 'user' : 'ai',
+          timestamp: new Date(content.createdAt).toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        }));
+
+        setMessagesByRoom((prev) => ({
+          ...prev,
+          'ieum-talk': loadedMessages,
+        }));
+      }
     } catch (error) {
       console.error('채팅 내역 로드 오류:', error);
     }
@@ -205,13 +231,17 @@ function Home() {
     try {
       // ieum-talk인 경우 Eume AI API 호출
       if (roomId === 'ieum-talk') {
-        // 먼저 채팅방 ID 조회
-        const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
-        const chatListId = chatInfo.id;
+        // chatListId가 없으면 조회
+        let currentChatListId = chatListId;
+        if (!currentChatListId) {
+          const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
+          currentChatListId = chatInfo.id;
+          setChatListId(currentChatListId);
+        }
 
         // POST /api/eume-chats/{chatListId}/contents
         const response = await axiosInstance.post(
-          API_ENDPOINTS.EUME_CHAT.CONTENTS(chatListId),
+          API_ENDPOINTS.EUME_CHAT.CONTENTS(currentChatListId),
           { messageContent: messageText }
         );
 

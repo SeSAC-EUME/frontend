@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/user.css';
 import { useTheme } from '../../shared/contexts/ThemeContext';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 function Onboarding3() {
   const navigate = useNavigate();
@@ -16,12 +17,12 @@ function Onboarding3() {
   const { theme } = useTheme();
 
   useEffect(() => {
-    // 기존 저장된 데이터 로드
-    const savedEmail = localStorage.getItem('eume_email') || '';
-    const savedUserName = localStorage.getItem('eume_realName') || '';
-    const savedBirthDate = localStorage.getItem('eume_birthDate') || '';
-    const savedGender = localStorage.getItem('eume_gender') || '';
-    const savedPhone = localStorage.getItem('eume_phone') || '';
+    // 기존 저장된 데이터 로드 (STORAGE_KEYS 사용)
+    const savedEmail = localStorage.getItem(STORAGE_KEYS.OAUTH_EMAIL) || '';
+    const savedUserName = localStorage.getItem(STORAGE_KEYS.OAUTH_REALNAME) || '';
+    const savedBirthDate = localStorage.getItem(STORAGE_KEYS.OAUTH_BIRTHDATE) || '';
+    const savedGender = localStorage.getItem(STORAGE_KEYS.OAUTH_GENDER) || '';
+    const savedPhone = localStorage.getItem(STORAGE_KEYS.OAUTH_PHONE) || '';
 
     setFormData((prev) => ({
       ...prev,
@@ -91,12 +92,12 @@ function Onboarding3() {
 
   const handleNext = () => {
     if (validateForm()) {
-      // 데이터 저장
-      localStorage.setItem('eume_email', formData.email);
-      localStorage.setItem('eume_realName', formData.userName);
-      localStorage.setItem('eume_birthDate', formData.birthDate);
-      localStorage.setItem('eume_gender', formData.gender);
-      localStorage.setItem('eume_phone', formData.phone);
+      // 데이터 저장 (STORAGE_KEYS 사용)
+      localStorage.setItem(STORAGE_KEYS.OAUTH_EMAIL, formData.email);
+      localStorage.setItem(STORAGE_KEYS.OAUTH_REALNAME, formData.userName);
+      localStorage.setItem(STORAGE_KEYS.OAUTH_BIRTHDATE, formData.birthDate);
+      localStorage.setItem(STORAGE_KEYS.OAUTH_GENDER, formData.gender);
+      localStorage.setItem(STORAGE_KEYS.OAUTH_PHONE, formData.phone);
 
       navigate('/user/onboarding-4');
     }

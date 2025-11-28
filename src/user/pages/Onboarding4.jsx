@@ -28,10 +28,20 @@ function Onboarding4() {
         localStorage.getItem(STORAGE_KEYS.OAUTH_REALNAME) || oauthUser.name || '';
       const nickname =
         localStorage.getItem(STORAGE_KEYS.OAUTH_USERNAME) || userName;
+      const email =
+        localStorage.getItem(STORAGE_KEYS.OAUTH_EMAIL) || oauthUser.email || '';
+      const birthDate = localStorage.getItem(STORAGE_KEYS.OAUTH_BIRTHDATE) || '';
+      const gender = localStorage.getItem(STORAGE_KEYS.OAUTH_GENDER) || '';
+      const phone = localStorage.getItem(STORAGE_KEYS.OAUTH_PHONE) || '';
 
-      // 프로필 업데이트 데이터 구성 (백엔드 테마 형식으로 변환)
+      // 프로필 업데이트 데이터 구성 (모든 수집 정보 포함)
       const profileData = {
-        nickname: nickname,
+        userName: userName,
+        nickName: nickname,
+        email: email,
+        birthDate: birthDate || null,
+        gender: gender ? gender.toUpperCase() : null,
+        phone: phone ? phone.replace(/-/g, '') : null,
         backgroundTheme: toBackendTheme(selectedTheme),
       };
 

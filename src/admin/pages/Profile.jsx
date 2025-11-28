@@ -72,7 +72,7 @@ function Profile() {
       name: profileData.name,
       email: profileData.email
     };
-    localStorage.setItem('eume_admin_user', JSON.stringify(updatedUser));
+    localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(updatedUser));
     alert('프로필이 저장되었습니다.');
   };
 
