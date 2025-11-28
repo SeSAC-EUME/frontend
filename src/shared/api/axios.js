@@ -32,9 +32,16 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     // 401 에러 시 로그인 페이지로 리다이렉트
+    // 단, 이미 로그인 페이지에 있거나 인증 확인 중이면 리다이렉트 하지 않음
     if (error.response?.status === 401) {
-      const isAdmin = window.location.pathname.startsWith('/admin');
-      window.location.href = isAdmin ? '/admin/login' : '/user/login';
+      const currentPath = window.location.pathname;
+      const isOnLoginPage = currentPath === '/user/login' || currentPath === '/admin/login';
+      const isOnOAuthRedirect = currentPath === '/oauth2/redirect';
+
+      if (!isOnLoginPage && !isOnOAuthRedirect) {
+        const isAdmin = currentPath.startsWith('/admin');
+        window.location.href = isAdmin ? '/admin/login' : '/user/login';
+      }
     }
 
     // 에러 로깅
