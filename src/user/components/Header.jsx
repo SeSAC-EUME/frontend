@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 function Header({ isSidebarOpen, onToggleSidebar }) {
   const navigate = useNavigate();
@@ -7,11 +8,10 @@ function Header({ isSidebarOpen, onToggleSidebar }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // 로그인 상태 체크 (토큰 또는 사용자 정보 존재 여부)
+    // 로그인 상태 체크 (사용자 정보 존재 여부, 쿠키 기반 인증)
     const checkLoginStatus = () => {
-      const token = localStorage.getItem('eume_user_token');
-      const user = localStorage.getItem('user');
-      setIsLoggedIn(!!(token || user));
+      const user = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+      setIsLoggedIn(!!user);
     };
 
     checkLoginStatus();

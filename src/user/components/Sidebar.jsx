@@ -1,5 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import logo from '../../shared/assets/logo.svg';
+import { API_ENDPOINTS } from '../../shared/api/config';
+import axiosInstance from '../../shared/api/axios';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 const pinnedRooms = [
   {
@@ -39,11 +42,21 @@ function Sidebar({
 }) {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('eume_user_token');
-    localStorage.removeItem('eume_onboarding_complete');
-    localStorage.removeItem('eume_visited');
+  const handleLogout = async () => {
+    try {
+      // 백엔드 로그아웃 API 호출 (쿠키 삭제)
+      await axiosInstance.post(API_ENDPOINTS.USER.LOGOUT);
+    } catch (error) {
+      console.error('로그아웃 API 오류:', error);
+    }
+
+    // localStorage 정리
+    localStorage.removeItem(STORAGE_KEYS.USER_INFO);
+    localStorage.removeItem(STORAGE_KEYS.USER_THEME);
+    localStorage.removeItem(STORAGE_KEYS.USER_ONBOARDING);
+    localStorage.removeItem(STORAGE_KEYS.USER_VISITED);
+    localStorage.removeItem(STORAGE_KEYS.OAUTH_USER);
+
     setIsUserMenuOpen(false);
     navigate('/user/login');
   };
