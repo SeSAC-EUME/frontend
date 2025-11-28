@@ -25,6 +25,7 @@ function Users() {
   const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const itemsPerPage = 10;
 
@@ -314,8 +315,28 @@ function Users() {
     alert(`사용자 ID ${userId}의 정보 수정 페이지로 이동합니다.\n이 기능은 추후 구현됩니다.`);
   };
 
-  const exportUsers = () => {
-    alert('이용자 데이터를 Excel로 내보냅니다.\n이 기능은 추후 구현됩니다.');
+  const exportUsers = async () => {
+    setIsExporting(true);
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS_EXPORT, {
+        responseType: 'blob',
+      });
+
+      // 파일 다운로드 처리
+      const url = window.URL.createObjectURL(new Blob([response]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `users_${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('이용자 데이터 내보내기 오류:', error);
+      alert('Excel 내보내기에 실패했습니다.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const bulkAction = () => {
@@ -364,9 +385,9 @@ function Users() {
         <div className="page-header">
           <h2>이용자 관리</h2>
           <div className="page-actions">
-            <button className="action-button" onClick={exportUsers}>
+            <button className="action-button" onClick={exportUsers} disabled={isExporting}>
               <img src={downloadIcon} alt="내보내기" className="button-icon" />
-              Excel 내보내기
+              {isExporting ? '내보내는 중...' : 'Excel 내보내기'}
             </button>
             <button className="action-button primary" onClick={bulkAction}>
               일괄 작업

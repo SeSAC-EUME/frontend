@@ -9,13 +9,23 @@ import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 function Login() {
   const navigate = useNavigate();
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [formData, setFormData] = useState({
     sigunguId: '', // 소속기관 ID
     username: '',
     password: '',
     rememberMe: false,
   });
+  const [registerData, setRegisterData] = useState({
+    sigunguId: '',
+    adminLoginId: '',
+    adminName: '',
+    adminEmail: '',
+    adminPw: '',
+    confirmPassword: '',
+  });
   const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // 기관 목록 상태
@@ -173,25 +183,144 @@ function Login() {
     alert('비밀번호 찾기 기능은 준비 중입니다.');
   };
 
+  // 회원가입 입력 핸들러
+  const handleRegisterChange = (e) => {
+    const { name, value } = e.target;
+    setRegisterData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    if (errorMessage) {
+      setErrorMessage('');
+    }
+    if (successMessage) {
+      setSuccessMessage('');
+    }
+  };
+
+  // 회원가입 제출
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
+
+    // 유효성 검사
+    if (!registerData.sigunguId) {
+      setErrorMessage('소속 기관을 선택해주세요.');
+      return;
+    }
+
+    if (!registerData.adminLoginId.trim()) {
+      setErrorMessage('아이디를 입력해주세요.');
+      return;
+    }
+
+    if (registerData.adminLoginId.length < 4) {
+      setErrorMessage('아이디는 4자 이상이어야 합니다.');
+      return;
+    }
+
+    if (!registerData.adminName.trim()) {
+      setErrorMessage('이름을 입력해주세요.');
+      return;
+    }
+
+    if (!registerData.adminEmail.trim()) {
+      setErrorMessage('이메일을 입력해주세요.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(registerData.adminEmail)) {
+      setErrorMessage('올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+
+    if (!registerData.adminPw) {
+      setErrorMessage('비밀번호를 입력해주세요.');
+      return;
+    }
+
+    if (registerData.adminPw.length < 8) {
+      setErrorMessage('비밀번호는 8자 이상이어야 합니다.');
+      return;
+    }
+
+    if (registerData.adminPw !== registerData.confirmPassword) {
+      setErrorMessage('비밀번호가 일치하지 않습니다.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await axiosRaw.post(API_ENDPOINTS.ADMIN.REGISTER, {
+        sigunguId: parseInt(registerData.sigunguId),
+        adminLoginId: registerData.adminLoginId,
+        adminName: registerData.adminName,
+        adminEmail: registerData.adminEmail,
+        adminPw: registerData.adminPw,
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        setSuccessMessage('회원가입이 완료되었습니다. 로그인해주세요.');
+        setRegisterData({
+          sigunguId: '',
+          adminLoginId: '',
+          adminName: '',
+          adminEmail: '',
+          adminPw: '',
+          confirmPassword: '',
+        });
+        // 2초 후 로그인 모드로 전환
+        setTimeout(() => {
+          setIsRegisterMode(false);
+          setSuccessMessage('');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('회원가입 오류:', error);
+      if (error.response?.status === 409) {
+        setErrorMessage('이미 존재하는 아이디입니다.');
+      } else {
+        setErrorMessage(
+          error.response?.data?.message || '회원가입 중 오류가 발생했습니다.'
+        );
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 모드 전환
+  const toggleMode = () => {
+    setIsRegisterMode(!isRegisterMode);
+    setErrorMessage('');
+    setSuccessMessage('');
+  };
+
   return (
     <div className="login-page">
       <div className="login-container">
         {/* 로고 및 타이틀 */}
         <div className="login-header">
           <img src={logo} alt="이음이 로고" className="admin-logo" />
-          <h1>이음이 관리 시스템</h1>
+          <h1>{isRegisterMode ? '관리자 회원가입' : '이음이 관리 시스템'}</h1>
           <p className="subtitle">
             서울시 고립은둔청년 정서 돌봄 AI 복지 에이전트
           </p>
         </div>
 
-        {/* 로그인 폼 */}
+        {/* 로그인/회원가입 폼 */}
         <div className="login-form-wrapper">
           {/* 에러 메시지 */}
           {errorMessage && (
             <div className="error-message show">{errorMessage}</div>
           )}
+          {/* 성공 메시지 */}
+          {successMessage && (
+            <div className="success-message show" style={{ backgroundColor: '#D1FAE5', color: '#065F46', padding: '12px', borderRadius: '8px', marginBottom: '16px', textAlign: 'center' }}>{successMessage}</div>
+          )}
 
+          {!isRegisterMode ? (
           <form className="login-form" onSubmit={handleSubmit}>
             {/* 소속기관 선택 */}
             <div className="form-group">
@@ -287,28 +416,31 @@ function Login() {
               {isLoading ? '로그인 중...' : '로그인'}
             </button>
 
-            {/* 회원가입 버튼 */}
-            <button
-              type="button"
-              className="login-button"
-              style={{
-                marginTop: '8px',
-                backgroundColor: '#10B981',
-                border: '1px solid #10B981',
-              }}
-              onClick={() => {
-                alert('회원가입 기능은 준비 중입니다.');
-              }}
-            >
-              회원가입
-            </button>
+            {/* 회원가입 전환 */}
+            <div style={{ textAlign: 'center', marginTop: '16px' }}>
+              <span style={{ color: '#6B7280', fontSize: '14px' }}>계정이 없으신가요? </span>
+              <button
+                type="button"
+                onClick={toggleMode}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#667EEA',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+              >
+                회원가입
+              </button>
+            </div>
 
             {/* 개발용 로그인 버튼 */}
             <button
               type="button"
               className="login-button"
               style={{
-                marginTop: '8px',
+                marginTop: '16px',
                 backgroundColor: '#6c757d',
                 border: '1px solid #6c757d',
               }}
@@ -342,6 +474,157 @@ function Login() {
               <span>보안 연결 (SSL) | 개인정보는 암호화되어 전송됩니다</span>
             </div>
           </form>
+          ) : (
+          /* 회원가입 폼 */
+          <form className="login-form" onSubmit={handleRegisterSubmit}>
+            {/* 소속기관 선택 */}
+            <div className="form-group">
+              <label htmlFor="reg-sigunguId">소속 기관</label>
+              {orgsLoading ? (
+                <div className="loading-text">기관 목록 로딩 중...</div>
+              ) : orgsError ? (
+                <div className="error-group">
+                  <p className="error-text">{orgsError}</p>
+                  <button
+                    type="button"
+                    className="retry-button"
+                    onClick={loadOrganizations}
+                  >
+                    재시도
+                  </button>
+                </div>
+              ) : (
+                <select
+                  id="reg-sigunguId"
+                  name="sigunguId"
+                  value={registerData.sigunguId}
+                  onChange={handleRegisterChange}
+                  required
+                >
+                  <option value="">소속 기관을 선택하세요</option>
+                  {orgs.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* 아이디 입력 */}
+            <div className="form-group">
+              <label htmlFor="adminLoginId">아이디</label>
+              <input
+                type="text"
+                id="adminLoginId"
+                name="adminLoginId"
+                value={registerData.adminLoginId}
+                onChange={handleRegisterChange}
+                placeholder="아이디를 입력하세요 (4자 이상)"
+                autoComplete="username"
+                required
+              />
+            </div>
+
+            {/* 이름 입력 */}
+            <div className="form-group">
+              <label htmlFor="adminName">이름</label>
+              <input
+                type="text"
+                id="adminName"
+                name="adminName"
+                value={registerData.adminName}
+                onChange={handleRegisterChange}
+                placeholder="이름을 입력하세요"
+                autoComplete="name"
+                required
+              />
+            </div>
+
+            {/* 이메일 입력 */}
+            <div className="form-group">
+              <label htmlFor="adminEmail">이메일</label>
+              <input
+                type="email"
+                id="adminEmail"
+                name="adminEmail"
+                value={registerData.adminEmail}
+                onChange={handleRegisterChange}
+                placeholder="이메일을 입력하세요"
+                autoComplete="email"
+                required
+              />
+            </div>
+
+            {/* 비밀번호 입력 */}
+            <div className="form-group">
+              <label htmlFor="adminPw">비밀번호</label>
+              <input
+                type="password"
+                id="adminPw"
+                name="adminPw"
+                value={registerData.adminPw}
+                onChange={handleRegisterChange}
+                placeholder="비밀번호를 입력하세요 (8자 이상)"
+                autoComplete="new-password"
+                required
+              />
+            </div>
+
+            {/* 비밀번호 확인 */}
+            <div className="form-group">
+              <label htmlFor="confirmPassword">비밀번호 확인</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={registerData.confirmPassword}
+                onChange={handleRegisterChange}
+                placeholder="비밀번호를 다시 입력하세요"
+                autoComplete="new-password"
+                required
+              />
+            </div>
+
+            {/* 회원가입 버튼 */}
+            <button
+              type="submit"
+              className="login-button"
+              disabled={isLoading || orgsLoading}
+              style={{
+                backgroundColor: '#10B981',
+                border: '1px solid #10B981',
+              }}
+            >
+              {isLoading ? '가입 중...' : '회원가입'}
+            </button>
+
+            {/* 로그인 전환 */}
+            <div style={{ textAlign: 'center', marginTop: '16px' }}>
+              <span style={{ color: '#6B7280', fontSize: '14px' }}>이미 계정이 있으신가요? </span>
+              <button
+                type="button"
+                onClick={toggleMode}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#667EEA',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+              >
+                로그인
+              </button>
+            </div>
+
+            {/* 보안 안내 */}
+            <div className="security-notice">
+              <img src={lockIcon} alt="보안" className="security-icon" />
+              <span>보안 연결 (SSL) | 개인정보는 암호화되어 전송됩니다</span>
+            </div>
+          </form>
+          )}
         </div>
 
         {/* 하단 정보 */}
