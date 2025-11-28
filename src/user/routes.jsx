@@ -3,6 +3,7 @@
  * 사용자 페이지 라우팅
  */
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 
 // User Pages
 import UserSplash from './pages/Splash';
@@ -18,7 +19,7 @@ import UserSettings from './pages/Settings';
 const userRoutes = [
   {
     path: '/',
-    element: <UserSplash />,
+    element: <Navigate to="/user/splash" replace />,
   },
   {
     path: '/oauth2/redirect',
