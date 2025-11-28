@@ -1047,6 +1047,17 @@ body.dark-mode {
   transform: translateY(-1px);
 }
 
+/* 로그인 페이지 중앙 정렬 컨테이너 (사이드바+헤더 포함 버전) */
+.login-container-centered {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 64px);
+  padding: var(--spacing-4);
+  width: 100%;
+}
+
 .login-form-card .btn-secondary {
   width: 100%;
   padding: var(--spacing-3) var(--spacing-4);

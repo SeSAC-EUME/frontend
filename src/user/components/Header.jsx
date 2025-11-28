@@ -1,7 +1,28 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 function Header({ isSidebarOpen, onToggleSidebar }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // 로그인 상태 체크 (토큰 또는 사용자 정보 존재 여부)
+    const checkLoginStatus = () => {
+      const token = localStorage.getItem('eume_user_token');
+      const user = localStorage.getItem('user');
+      setIsLoggedIn(!!(token || user));
+    };
+
+    checkLoginStatus();
+
+    // storage 이벤트 리스너 추가 (다른 탭에서의 변경 감지)
+    window.addEventListener('storage', checkLoginStatus);
+
+    return () => {
+      window.removeEventListener('storage', checkLoginStatus);
+    };
+  }, [location]); // location 변경 시에도 체크
 
   const handleLogin = () => {
     navigate('/user/login');
@@ -11,17 +32,29 @@ function Header({ isSidebarOpen, onToggleSidebar }) {
     navigate('/user/onboarding1');
   };
 
+  const handleMyPage = () => {
+    navigate('/user/settings');
+  };
+
   return (
     <div className="chat-main-header">
       <div className="header-center">
       </div>
       <div className="header-right">
-        <button className="header-login-btn" onClick={handleLogin}>
-          로그인
-        </button>
-        <button className="header-signup-btn" onClick={handleSignup}>
-          회원가입
-        </button>
+        {!isLoggedIn ? (
+          <>
+            <button className="header-login-btn" onClick={handleLogin}>
+              로그인
+            </button>
+            <button className="header-signup-btn" onClick={handleSignup}>
+              회원가입
+            </button>
+          </>
+        ) : (
+          <button className="header-signup-btn" onClick={handleMyPage}>
+            마이페이지
+          </button>
+        )}
       </div>
     </div>
   );
