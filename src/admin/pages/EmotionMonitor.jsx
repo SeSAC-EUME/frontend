@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
+import { API_ENDPOINTS } from '../../shared/api/config';
+import axiosInstance from '../../shared/api/axios';
+import axiosBlob, { downloadBlob, extractFilename } from '../../shared/api/axiosBlob';
 import '../styles/admin.css';
 import '../styles/admin-responsive.css';
 
@@ -11,120 +14,161 @@ import heartIcon from '../assets/icons/heart.svg';
 import usersIcon from '../assets/icons/users.svg';
 import triangleAlertIcon from '../assets/icons/triangle-alert.svg';
 
+// 기본 통계 데이터 (폴백용)
+const defaultStats = {
+  총이용자: 0,
+  긍정: 0,
+  보통: 0,
+  부정: 0,
+};
+
+// 기본 감정 분포 (폴백용)
+const defaultDistribution = [
+  { emotion: '매우 좋음', count: 0, percentage: 0, color: '#10B981' },
+  { emotion: '좋음', count: 0, percentage: 0, color: '#34D399' },
+  { emotion: '보통', count: 0, percentage: 0, color: '#FCD34D' },
+  { emotion: '우울', count: 0, percentage: 0, color: '#F59E0B' },
+  { emotion: '매우 우울', count: 0, percentage: 0, color: '#EF4444' },
+];
+
 function EmotionMonitor() {
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [selectedEmotion, setSelectedEmotion] = useState('all');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // 샘플 데이터 - 감정 통계
-  const emotionStats = {
-    총이용자: 8,
-    긍정: 3,
-    보통: 3,
-    부정: 2,
-    위험: 2
+  // 감정 통계 상태
+  const [emotionStats, setEmotionStats] = useState(defaultStats);
+
+  // 감정 분포 상태
+  const [emotionDistribution, setEmotionDistribution] = useState(defaultDistribution);
+
+  // 이용자별 감정 현황 상태
+  const [userEmotions, setUserEmotions] = useState([]);
+
+  // 데이터 로드
+  useEffect(() => {
+    loadEmotionData();
+  }, [selectedPeriod]);
+
+  // 감정 데이터 로드
+  const loadEmotionData = async () => {
+    setIsLoading(true);
+    try {
+      // 사용자 목록 조회 (감정 정보 포함)
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS);
+      const users = Array.isArray(response) ? response : response.users || [];
+
+      // 사용자 데이터를 감정 현황 형식으로 변환
+      const emotionData = users.map((user) => ({
+        id: user.id || user.userId,
+        name: user.userName || user.name || '사용자',
+        age: calculateAge(user.birthDate),
+        currentEmotion: mapEmotionLabel(user.emotionStatus || user.emotion),
+        emotionLevel: getEmotionLevel(user.emotionStatus || user.emotion),
+        trend: user.emotionTrend || 'stable',
+        lastUpdate: formatDateTime(user.lastActiveAt || user.updatedAt),
+        weeklyAvg: user.weeklyEmotionAvg || 50,
+        conversationCount: user.conversationCount || 0,
+      }));
+
+      setUserEmotions(emotionData);
+
+      // 통계 계산
+      calculateStats(emotionData);
+    } catch (error) {
+      console.error('감정 데이터 로드 오류:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // 샘플 데이터 - 감정 분포
-  const emotionDistribution = [
-    { emotion: '매우 좋음', count: 1, percentage: 12.5, color: '#10B981' },
-    { emotion: '좋음', count: 2, percentage: 25, color: '#34D399' },
-    { emotion: '보통', count: 3, percentage: 37.5, color: '#FCD34D' },
-    { emotion: '우울', count: 1, percentage: 12.5, color: '#F59E0B' },
-    { emotion: '매우 우울', count: 1, percentage: 12.5, color: '#EF4444' }
-  ];
+  // 통계 계산
+  const calculateStats = (users) => {
+    const stats = {
+      총이용자: users.length,
+      긍정: 0,
+      보통: 0,
+      부정: 0,
+    };
 
-  // 샘플 데이터 - 이용자별 감정 현황
-  const userEmotions = [
-    {
-      id: 1,
-      name: '김민수',
-      age: 24,
-      currentEmotion: '우울',
-      emotionLevel: 'high',
-      trend: 'down',
-      lastUpdate: '2025-11-26 09:30',
-      weeklyAvg: 65,
-      conversationCount: 45
-    },
-    {
-      id: 2,
-      name: '박지원',
-      age: 28,
-      currentEmotion: '보통',
-      emotionLevel: 'medium',
-      trend: 'stable',
-      lastUpdate: '2025-11-25 14:20',
-      weeklyAvg: 50,
-      conversationCount: 32
-    },
-    {
-      id: 3,
-      name: '이서연',
-      age: 22,
-      currentEmotion: '좋음',
-      emotionLevel: 'low',
-      trend: 'up',
-      lastUpdate: '2025-11-26 10:15',
-      weeklyAvg: 30,
-      conversationCount: 28
-    },
-    {
-      id: 4,
-      name: '최준호',
-      age: 31,
-      currentEmotion: '좋음',
-      emotionLevel: 'low',
-      trend: 'stable',
-      lastUpdate: '2025-11-26 08:45',
-      weeklyAvg: 25,
-      conversationCount: 52
-    },
-    {
-      id: 5,
-      name: '정수빈',
-      age: 26,
-      currentEmotion: '보통',
-      emotionLevel: 'medium',
-      trend: 'stable',
-      lastUpdate: '2025-11-25 16:30',
-      weeklyAvg: 55,
-      conversationCount: 38
-    },
-    {
-      id: 6,
-      name: '강태현',
-      age: 29,
-      currentEmotion: '매우 우울',
-      emotionLevel: 'high',
-      trend: 'down',
-      lastUpdate: '2025-11-20 11:20',
-      weeklyAvg: 85,
-      conversationCount: 15
-    },
-    {
-      id: 7,
-      name: '한지우',
-      age: 23,
-      currentEmotion: '매우 좋음',
-      emotionLevel: 'low',
-      trend: 'up',
-      lastUpdate: '2025-11-26 09:00',
-      weeklyAvg: 15,
-      conversationCount: 22
-    },
-    {
-      id: 8,
-      name: '오성민',
-      age: 33,
-      currentEmotion: '보통',
-      emotionLevel: 'medium',
-      trend: 'stable',
-      lastUpdate: '2025-11-25 19:45',
-      weeklyAvg: 45,
-      conversationCount: 41
+    const distribution = {
+      '매우 좋음': 0,
+      '좋음': 0,
+      '보통': 0,
+      '우울': 0,
+      '매우 우울': 0,
+    };
+
+    users.forEach((user) => {
+      const emotion = user.currentEmotion;
+      if (['매우 좋음', '좋음'].includes(emotion)) stats.긍정++;
+      else if (emotion === '보통') stats.보통++;
+      else if (['우울', '매우 우울'].includes(emotion)) stats.부정++;
+
+      if (distribution[emotion] !== undefined) {
+        distribution[emotion]++;
+      }
+    });
+
+    setEmotionStats(stats);
+
+    // 분포 계산
+    const total = users.length || 1;
+    setEmotionDistribution([
+      { emotion: '매우 좋음', count: distribution['매우 좋음'], percentage: Math.round((distribution['매우 좋음'] / total) * 100), color: '#10B981' },
+      { emotion: '좋음', count: distribution['좋음'], percentage: Math.round((distribution['좋음'] / total) * 100), color: '#34D399' },
+      { emotion: '보통', count: distribution['보통'], percentage: Math.round((distribution['보통'] / total) * 100), color: '#FCD34D' },
+      { emotion: '우울', count: distribution['우울'], percentage: Math.round((distribution['우울'] / total) * 100), color: '#F59E0B' },
+      { emotion: '매우 우울', count: distribution['매우 우울'], percentage: Math.round((distribution['매우 우울'] / total) * 100), color: '#EF4444' },
+    ]);
+  };
+
+  // 나이 계산
+  const calculateAge = (birthDate) => {
+    if (!birthDate) return 0;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+      age--;
     }
-  ];
+    return age;
+  };
+
+  // 감정 상태 매핑
+  const mapEmotionLabel = (emotion) => {
+    const emotionMap = {
+      'VERY_GOOD': '매우 좋음',
+      'GOOD': '좋음',
+      'NEUTRAL': '보통',
+      'SAD': '우울',
+      'VERY_SAD': '매우 우울',
+    };
+    return emotionMap[emotion] || emotion || '보통';
+  };
+
+  // 감정 레벨 결정
+  const getEmotionLevel = (emotion) => {
+    if (['VERY_SAD', '매우 우울', 'SAD', '우울'].includes(emotion)) return 'high';
+    if (['NEUTRAL', '보통'].includes(emotion)) return 'medium';
+    return 'low';
+  };
+
+  // 날짜 포맷
+  const formatDateTime = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   const getEmotionColor = (emotion) => {
     const colorMap = {
@@ -149,8 +193,28 @@ function EmotionMonitor() {
     return '#94A3B8';
   };
 
-  const exportData = () => {
-    alert('감정 데이터를 Excel로 내보냅니다.');
+  const exportData = async () => {
+    setIsExporting(true);
+    try {
+      const response = await axiosBlob.get(API_ENDPOINTS.ADMIN.USERS_EXPORT);
+      const contentDisposition = response.headers['content-disposition'];
+      const defaultFilename = `emotion_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const filename = extractFilename(contentDisposition, defaultFilename);
+      downloadBlob(
+        response.data,
+        filename,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+    } catch (error) {
+      console.error('데이터 내보내기 오류:', error);
+      alert('데이터 내보내기에 실패했습니다.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const refreshData = () => {
+    loadEmotionData();
   };
 
   const viewUserDetail = (userId) => {
@@ -172,13 +236,13 @@ function EmotionMonitor() {
       <div className="page-header">
         <h2>감정 모니터링</h2>
         <div className="page-actions">
-          <button className="action-button" onClick={exportData}>
+          <button className="action-button" onClick={exportData} disabled={isExporting}>
             <img src={downloadIcon} alt="내보내기" className="button-icon" />
-            데이터 내보내기
+            {isExporting ? '내보내는 중...' : '데이터 내보내기'}
           </button>
-          <button className="action-button primary" onClick={() => window.location.reload()}>
+          <button className="action-button primary" onClick={refreshData} disabled={isLoading}>
             <img src={refreshCwIcon} alt="새로고침" className="button-icon" />
-            새로고침
+            {isLoading ? '로딩 중...' : '새로고침'}
           </button>
         </div>
       </div>
