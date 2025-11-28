@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
+import { API_ENDPOINTS } from '../../shared/api/config';
+import axiosInstance from '../../shared/api/axios';
+import axiosBlob, { downloadBlob, extractFilename } from '../../shared/api/axiosBlob';
 
 // 아이콘 import
 import downloadIcon from '../assets/icons/download.svg';
@@ -13,16 +16,69 @@ import messageCircleIcon from '../assets/icons/message-circle.svg';
 import phoneIcon from '../assets/icons/phone.svg';
 import chartBarIcon from '../assets/icons/chart-bar.svg';
 
+// 기본 통계 데이터 (API 폴백용)
+const defaultStats = {
+  totalUsers: 1234,
+  activeUsers: 892,
+  emergencyAlerts: 3,
+  avgSatisfaction: 4.5,
+};
+
 function Dashboard() {
   const navigate = useNavigate();
+  const [stats, setStats] = useState(defaultStats);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const downloadReport = () => {
-    alert('보고서 다운로드 기능은 추후 구현됩니다.');
+  // 대시보드 데이터 로드
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.REPORTS_SUMMARY);
+      setStats({
+        totalUsers: response.totalUsers || defaultStats.totalUsers,
+        activeUsers: response.activeUsers || defaultStats.activeUsers,
+        emergencyAlerts: response.emergencyAlerts || defaultStats.emergencyAlerts,
+        avgSatisfaction: response.avgSatisfaction || defaultStats.avgSatisfaction,
+      });
+    } catch (error) {
+      console.error('대시보드 데이터 로드 오류:', error);
+      // API 실패 시 기본값 사용
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const downloadReport = async () => {
+    setIsDownloading(true);
+    try {
+      const response = await axiosBlob.get(API_ENDPOINTS.ADMIN.REPORTS_EXPORT);
+
+      // Content-Disposition에서 파일명 추출 또는 기본값 사용
+      const contentDisposition = response.headers['content-disposition'];
+      const defaultFilename = `report_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const filename = extractFilename(contentDisposition, defaultFilename);
+
+      // MIME 타입 지정하여 다운로드
+      downloadBlob(
+        response.data,
+        filename,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+    } catch (error) {
+      console.error('보고서 다운로드 오류:', error);
+      alert('보고서 다운로드에 실패했습니다.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const refreshDashboard = () => {
-    alert('데이터를 새로고침합니다...');
-    window.location.reload();
+    loadDashboardData();
   };
 
   const viewUserDetail = (userId) => {
@@ -35,13 +91,13 @@ function Dashboard() {
         <div className="page-header">
           <h2>대시보드</h2>
           <div className="page-actions">
-            <button className="action-button" onClick={downloadReport}>
+            <button className="action-button" onClick={downloadReport} disabled={isDownloading}>
               <img src={downloadIcon} alt="다운로드" className="button-icon" />
-              보고서 다운로드
+              {isDownloading ? '다운로드 중...' : '보고서 다운로드'}
             </button>
-            <button className="action-button primary" onClick={refreshDashboard}>
+            <button className="action-button primary" onClick={refreshDashboard} disabled={isLoading}>
               <img src={refreshCwIcon} alt="새로고침" className="button-icon" />
-              새로고침
+              {isLoading ? '로딩 중...' : '새로고침'}
             </button>
           </div>
         </div>
@@ -55,7 +111,7 @@ function Dashboard() {
                 <img src={usersIcon} alt="전체 이용자" style={{ width: '28px', height: '28px' }} />
               </div>
               <div className="stat-info">
-                <span className="stat-value">1,234</span>
+                <span className="stat-value">{stats.totalUsers.toLocaleString()}</span>
                 <span className="stat-label">전체 이용자</span>
                 <span className="stat-change positive">+12% 이번 달</span>
               </div>
@@ -66,7 +122,7 @@ function Dashboard() {
                 <img src={circleCheckIcon} alt="활성 이용자" style={{ width: '28px', height: '28px' }} />
               </div>
               <div className="stat-info">
-                <span className="stat-value">892</span>
+                <span className="stat-value">{stats.activeUsers.toLocaleString()}</span>
                 <span className="stat-label">활성 이용자</span>
                 <span className="stat-change positive">+5% 오늘</span>
               </div>
@@ -77,7 +133,7 @@ function Dashboard() {
                 <img src={triangleAlertIcon} alt="긴급 알림" style={{ width: '28px', height: '28px' }} />
               </div>
               <div className="stat-info">
-                <span className="stat-value">3</span>
+                <span className="stat-value">{stats.emergencyAlerts}</span>
                 <span className="stat-label">긴급 알림</span>
                 <span className="stat-change negative">요청 대기 중</span>
               </div>
@@ -88,7 +144,7 @@ function Dashboard() {
                 <img src={smileIcon} alt="평균 만족도" style={{ width: '28px', height: '28px' }} />
               </div>
               <div className="stat-info">
-                <span className="stat-value">4.5</span>
+                <span className="stat-value">{stats.avgSatisfaction}</span>
                 <span className="stat-label">평균 만족도</span>
                 <span className="stat-change positive">+0.2 이번 주</span>
               </div>

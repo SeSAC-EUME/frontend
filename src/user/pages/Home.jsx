@@ -3,6 +3,10 @@ import '../styles/user.css';
 import { useTheme } from '../../shared/contexts/ThemeContext';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import { API_ENDPOINTS } from '../../shared/api/config';
+import axiosInstance from '../../shared/api/axios';
+import axiosRaw from '../../shared/api/axiosRaw';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 const pinnedRooms = [
   {
@@ -72,18 +76,164 @@ function Home() {
   const [selectedChatId, setSelectedChatId] = useState('ieum-talk');
   const [userInfo, setUserInfo] = useState(emptyUser);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [chatListId, setChatListId] = useState(null);
+  const [isLoadingChat, setIsLoadingChat] = useState(true); // 채팅 로딩 상태
   const messagesContainerRef = useRef(null);
 
+  // 사용자 정보 및 채팅방 초기화
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const storedUser = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.USER_INFO) || '{}'
+    );
     setUserInfo({
-      userId: storedUser.userId || '',
+      userId: storedUser.id || storedUser.userId || '',
       email: storedUser.email || '',
-      userName: storedUser.name || '사용자',
+      userName: storedUser.userName || storedUser.name || '사용자',
       nickname: storedUser.nickname || '',
       profileImage: storedUser.profileImage || '',
     });
+
+    // Eume AI 채팅방 초기화
+    initializeEumeChat();
+
+    // 사용자 채팅 목록 로드
+    loadUserChatList();
   }, []);
+
+  // 사용자 채팅 목록 로드 (GET /api/user-chats)
+  const loadUserChatList = async () => {
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.LIST);
+      const chatList = Array.isArray(response) ? response : response.chatLists || [];
+
+      if (chatList.length > 0) {
+        const formattedHistory = chatList.map((chat) => ({
+          id: chat.id || chat.chatListId,
+          title: chat.title || '채팅',
+          updatedAt: chat.updatedAt
+            ? formatRelativeTime(chat.updatedAt)
+            : '이전',
+        }));
+        setChatHistory(formattedHistory);
+      }
+    } catch (error) {
+      // 404는 채팅 목록이 없는 경우 - 정상
+      if (error.response?.status !== 404) {
+        console.error('채팅 목록 로드 오류:', error);
+      }
+    }
+  };
+
+  // 상대 시간 포맷 (예: "방금 전", "1시간 전", "어제")
+  const formatRelativeTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHour = Math.floor(diffMs / 3600000);
+    const diffDay = Math.floor(diffMs / 86400000);
+
+    if (diffMin < 1) return '방금 전';
+    if (diffMin < 60) return `${diffMin}분 전`;
+    if (diffHour < 24) return `${diffHour}시간 전`;
+    if (diffDay === 1) return '어제';
+    if (diffDay < 7) return `${diffDay}일 전`;
+    return date.toLocaleDateString('ko-KR');
+  };
+
+  // Eume AI 채팅방 생성 또는 조회
+  const initializeEumeChat = async () => {
+    setIsLoadingChat(true);
+    try {
+      // 1. localStorage에서 캐시된 chatListId 확인
+      const cachedChatId = localStorage.getItem(STORAGE_KEYS.EUME_CHAT_ID);
+      if (cachedChatId) {
+        console.log('캐시된 채팅방 ID 사용:', cachedChatId);
+        setChatListId(cachedChatId);
+        await loadChatContents(cachedChatId);
+        return;
+      }
+
+      // 2. POST /api/eume-chats (201: 새로 생성, 409: 이미 존재)
+      const response = await axiosRaw.post(API_ENDPOINTS.EUME_CHAT.CREATE);
+      if (response.status === 201) {
+        console.log('Eume 채팅방 생성:', response.data);
+        const newChatId = response.data?.id;
+        if (newChatId) {
+          setChatListId(newChatId);
+          localStorage.setItem(STORAGE_KEYS.EUME_CHAT_ID, newChatId);
+        }
+      }
+    } catch (error) {
+      if (error.response?.status === 409) {
+        // 이미 채팅방 존재 - 기존 채팅 내역 로드
+        console.log('기존 Eume 채팅방 사용');
+        await loadExistingChat();
+      } else {
+        console.error('채팅방 초기화 오류:', error);
+      }
+    } finally {
+      setIsLoadingChat(false);
+    }
+  };
+
+  // 기존 채팅방 정보 조회 후 내역 로드
+  const loadExistingChat = async () => {
+    try {
+      // GET /api/eume-chats/me 로 채팅방 정보 조회
+      const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
+      console.log('기존 채팅 정보:', chatInfo);
+
+      if (chatInfo.id) {
+        setChatListId(chatInfo.id);
+        localStorage.setItem(STORAGE_KEYS.EUME_CHAT_ID, chatInfo.id);
+
+        // 채팅 내역 로드
+        await loadChatContents(chatInfo.id);
+      }
+    } catch (error) {
+      console.error('채팅방 조회 오류:', error);
+    }
+  };
+
+  // 채팅 내역 로드 (GET /api/eume-chats/{id}/contents)
+  const loadChatContents = async (chatId) => {
+    try {
+      const contentsResponse = await axiosInstance.get(
+        API_ENDPOINTS.EUME_CHAT.CONTENTS(chatId)
+      );
+      console.log('채팅 내역:', contentsResponse);
+
+      // 응답이 배열인 경우 (메시지 목록)
+      const contents = Array.isArray(contentsResponse)
+        ? contentsResponse
+        : contentsResponse.contents || contentsResponse.messages || [];
+
+      if (contents.length > 0) {
+        const loadedMessages = contents.map((content, index) => ({
+          id: `loaded-${content.id || index}`,
+          text: content.messageContent || content.content || content.message,
+          sender: content.messageType === 'USER' || content.sender === 'user' ? 'user' : 'ai',
+          timestamp: content.createdAt
+            ? new Date(content.createdAt).toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : '',
+        }));
+
+        setMessagesByRoom((prev) => ({
+          ...prev,
+          'ieum-talk': loadedMessages,
+        }));
+      }
+    } catch (error) {
+      // 404는 아직 대화 내역이 없는 경우 - 정상
+      if (error.response?.status !== 404) {
+        console.error('채팅 내역 로드 오류:', error);
+      }
+    }
+  };
 
   const selectedChat = useMemo(() => {
     return (
@@ -105,21 +255,94 @@ function Home() {
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
-  const handleSelectRoom = (roomId) => {
+  const handleSelectRoom = async (roomId) => {
     setSelectedChatId(roomId);
-    setMessagesByRoom((prev) =>
-      prev[roomId] ? prev : { ...prev, [roomId]: [] }
-    );
     setPrompt('');
     setIsSidebarOpen(false);
+
+    // 이미 메시지가 로드된 경우 스킵
+    if (messagesByRoom[roomId] && messagesByRoom[roomId].length > 0) {
+      return;
+    }
+
+    // 고정 채팅방이 아닌 경우 (일반 채팅방) 과거 대화 로드
+    const isPinnedRoom = ['new-chat', 'policy-info', 'ieum-talk'].includes(roomId);
+    if (!isPinnedRoom && !roomId.startsWith('temp-')) {
+      await loadUserChatContents(roomId);
+    } else {
+      // 고정 채팅방은 빈 배열로 초기화
+      setMessagesByRoom((prev) =>
+        prev[roomId] ? prev : { ...prev, [roomId]: [] }
+      );
+    }
   };
 
-  const handleStartNewChat = () => {
-    const newId = `chat-${Date.now()}`;
-    const newEntry = { id: newId, title: '새 채팅', updatedAt: '방금 전' };
-    setChatHistory((prev) => [newEntry, ...prev]);
-    setMessagesByRoom((prev) => ({ ...prev, [newId]: [] }));
-    handleSelectRoom(newId);
+  // 일반 채팅방 내용 로드 (GET /api/user-chats/{chatListId}/contents)
+  const loadUserChatContents = async (chatId) => {
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.CONTENTS(chatId));
+      const contents = Array.isArray(response) ? response : response.contents || [];
+
+      if (contents.length > 0) {
+        const loadedMessages = contents.map((content, index) => ({
+          id: `loaded-${content.id || index}`,
+          text: content.messageContent || content.content || content.message,
+          sender: content.messageType === 'USER' || content.sender === 'user' ? 'user' : 'ai',
+          timestamp: content.createdAt
+            ? new Date(content.createdAt).toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : '',
+        }));
+
+        setMessagesByRoom((prev) => ({
+          ...prev,
+          [chatId]: loadedMessages,
+        }));
+      } else {
+        setMessagesByRoom((prev) => ({
+          ...prev,
+          [chatId]: [],
+        }));
+      }
+    } catch (error) {
+      // 404는 대화 내역이 없는 경우 - 정상
+      if (error.response?.status !== 404) {
+        console.error('채팅 내용 로드 오류:', error);
+      }
+      setMessagesByRoom((prev) => ({
+        ...prev,
+        [chatId]: [],
+      }));
+    }
+  };
+
+  const handleStartNewChat = async () => {
+    try {
+      // POST /api/user-chats - 새 채팅방 생성
+      const response = await axiosInstance.post(API_ENDPOINTS.USER_CHAT.CREATE);
+      const newChatId = response.id || response.chatListId;
+
+      if (newChatId) {
+        const newEntry = {
+          id: newChatId,
+          title: response.title || '새 채팅',
+          updatedAt: '방금 전',
+        };
+        setChatHistory((prev) => [newEntry, ...prev]);
+        setMessagesByRoom((prev) => ({ ...prev, [newChatId]: [] }));
+        handleSelectRoom(newChatId);
+      }
+    } catch (error) {
+      console.error('새 채팅 생성 오류:', error);
+      // 백엔드 오류 시 로컬 임시 채팅방 생성
+      const tempId = `temp-${Date.now()}`;
+      const newEntry = { id: tempId, title: '새 채팅', updatedAt: '방금 전' };
+      setChatHistory((prev) => [newEntry, ...prev]);
+      setMessagesByRoom((prev) => ({ ...prev, [tempId]: [] }));
+      handleSelectRoom(tempId);
+    }
   };
 
   const handleActionClick = (id) => {
@@ -130,11 +353,10 @@ function Home() {
     handleSelectRoom(id);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!prompt.trim()) return;
 
     const roomId = selectedChatId;
-    const roomTitle = selectedChat?.title || '이음이';
     const timestamp = new Date().toLocaleTimeString('ko-KR', {
       hour: '2-digit',
       minute: '2-digit',
@@ -151,6 +373,7 @@ function Home() {
       ...prev,
       [roomId]: [...(prev[roomId] || []), userMessage],
     }));
+    const messageText = prompt.trim();
     setPrompt('');
 
     setChatHistory((prev) =>
@@ -161,10 +384,84 @@ function Home() {
 
     setIsStreamingByRoom((prev) => ({ ...prev, [roomId]: true }));
 
-    setTimeout(() => {
-      const aiMessage = {
-        id: `ai-${Date.now()}`,
-        text: `${roomTitle}에서 답변을 준비하고 있어요.`,
+    try {
+      // ieum-talk인 경우 Eume AI API 호출
+      if (roomId === 'ieum-talk') {
+        // chatListId가 없으면 조회
+        let currentChatListId = chatListId;
+        if (!currentChatListId) {
+          const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
+          currentChatListId = chatInfo.id;
+          setChatListId(currentChatListId);
+        }
+
+        // POST /api/eume-chats/{chatListId}/contents
+        const response = await axiosInstance.post(
+          API_ENDPOINTS.EUME_CHAT.CONTENTS(currentChatListId),
+          { messageContent: messageText }
+        );
+
+        // 백엔드 응답에서 AI 메시지 추출
+        const aiMessage = {
+          id: `ai-${Date.now()}`,
+          text: response.eumeMessage?.messageContent || '답변을 생성할 수 없습니다.',
+          sender: 'ai',
+          timestamp: new Date().toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        };
+
+        setMessagesByRoom((prev) => ({
+          ...prev,
+          [roomId]: [...(prev[roomId] || []), aiMessage],
+        }));
+      } else if (roomId === 'policy-info') {
+        // 정책 정보 채팅방은 목업 유지 (별도 API 미구현)
+        setTimeout(() => {
+          const aiMessage = {
+            id: `ai-${Date.now()}`,
+            text: '정책 정보 검색 기능은 준비 중입니다.',
+            sender: 'ai',
+            timestamp: new Date().toLocaleTimeString('ko-KR', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          };
+
+          setMessagesByRoom((prev) => ({
+            ...prev,
+            [roomId]: [...(prev[roomId] || []), aiMessage],
+          }));
+        }, 600);
+      } else {
+        // 일반 채팅방은 USER_CHAT API 호출
+        const response = await axiosInstance.post(
+          API_ENDPOINTS.USER_CHAT.CONTENTS(roomId),
+          { messageContent: messageText }
+        );
+
+        // 백엔드 응답에서 AI 메시지 추출
+        const aiMessage = {
+          id: `ai-${Date.now()}`,
+          text: response.aiMessage?.messageContent || response.message || '답변을 생성할 수 없습니다.',
+          sender: 'ai',
+          timestamp: new Date().toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        };
+
+        setMessagesByRoom((prev) => ({
+          ...prev,
+          [roomId]: [...(prev[roomId] || []), aiMessage],
+        }));
+      }
+    } catch (error) {
+      console.error('메시지 전송 오류:', error);
+      const errorMessage = {
+        id: `error-${Date.now()}`,
+        text: '메시지 전송 중 오류가 발생했습니다. 다시 시도해주세요.',
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString('ko-KR', {
           hour: '2-digit',
@@ -174,13 +471,14 @@ function Home() {
 
       setMessagesByRoom((prev) => ({
         ...prev,
-        [roomId]: [...(prev[roomId] || []), aiMessage],
+        [roomId]: [...(prev[roomId] || []), errorMessage],
       }));
+    } finally {
       setIsStreamingByRoom((prev) => ({
         ...prev,
         [roomId]: false,
       }));
-    }, 600);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -210,7 +508,13 @@ function Home() {
         <Header isSidebarOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
 
         <div className="chat-messages" ref={messagesContainerRef}>
-          {!hasMessages ? (
+          {isLoadingChat && selectedChatId === 'ieum-talk' ? (
+            <div className="chat-welcome">
+              <div style={{ textAlign: 'center', color: '#666' }}>
+                <p>대화 내역을 불러오는 중...</p>
+              </div>
+            </div>
+          ) : !hasMessages ? (
             <div className="chat-welcome">
               <h2 className="welcome-title">어디서부터 시작할까요?</h2>
               <div className="prompt-bar prompt-bar-large">

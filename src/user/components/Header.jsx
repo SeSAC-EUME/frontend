@@ -1,28 +1,15 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 function Header({ isSidebarOpen, onToggleSidebar }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  useEffect(() => {
-    // 로그인 상태 체크 (토큰 또는 사용자 정보 존재 여부)
-    const checkLoginStatus = () => {
-      const token = localStorage.getItem('eume_user_token');
-      const user = localStorage.getItem('user');
-      setIsLoggedIn(!!(token || user));
-    };
-
-    checkLoginStatus();
-
-    // storage 이벤트 리스너 추가 (다른 탭에서의 변경 감지)
-    window.addEventListener('storage', checkLoginStatus);
-
-    return () => {
-      window.removeEventListener('storage', checkLoginStatus);
-    };
-  }, [location]); // location 변경 시에도 체크
+  // 매 렌더링마다 로그인 상태 확인
+  // USER_INFO: 온보딩 완료 후 저장됨
+  // OAUTH_USER: OAuth 로그인 직후, 온보딩 전에 저장됨
+  const userInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+  const oauthUser = localStorage.getItem(STORAGE_KEYS.OAUTH_USER);
+  const isLoggedIn = !!(userInfo || oauthUser);
 
   const handleLogin = () => {
     navigate('/user/login');

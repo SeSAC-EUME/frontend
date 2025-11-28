@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/user.css';
 import logo from '../../shared/assets/logo.svg';
-import { JAVA_URL } from '../../shared/api/config';
+import { JAVA_URL, API_ENDPOINTS } from '../../shared/api/config';
 import { useTheme } from '../../shared/contexts/ThemeContext';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
+import axiosInstance from '../../shared/api/axios';
+import { toFrontendTheme } from '../../shared/utils/themeMapper';
 
 function Login() {
   const navigate = useNavigate();
@@ -13,6 +16,57 @@ function Login() {
   const { theme } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // 이미 로그인된 사용자는 적절한 페이지로 리다이렉트
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const userInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+      const oauthUser = localStorage.getItem(STORAGE_KEYS.OAUTH_USER);
+      const onboardingComplete = localStorage.getItem(STORAGE_KEYS.USER_ONBOARDING);
+
+      if (userInfo) {
+        // 온보딩 완료된 사용자 -> 홈으로
+        navigate('/user/home');
+        return;
+      }
+
+      if (oauthUser && !onboardingComplete) {
+        // OAuth 로그인했지만 온보딩 미완료 -> 온보딩으로
+        navigate('/user/onboarding-1');
+        return;
+      }
+
+      // localStorage에 정보가 없지만, 쿠키로 인증되어 있을 수 있음
+      // 백엔드 API로 확인
+      try {
+        const userData = await axiosInstance.get(API_ENDPOINTS.USER.ME);
+        if (userData && userData.email) {
+          // 인증된 사용자 - localStorage에 정보 저장
+          const userInfoToSave = {
+            id: userData.id,
+            email: userData.email,
+            userName: userData.userName || userData.name,
+            nickname: userData.nickname,
+            profileImage: userData.profileImage,
+            backgroundTheme: toFrontendTheme(userData.backgroundTheme),
+          };
+          localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfoToSave));
+          localStorage.setItem(STORAGE_KEYS.USER_THEME, userInfoToSave.backgroundTheme || 'ocean');
+          localStorage.setItem(STORAGE_KEYS.USER_VISITED, 'true');
+          navigate('/user/home');
+          return;
+        }
+      } catch (err) {
+        // 인증되지 않은 사용자 - 로그인 페이지 표시
+        console.log('인증되지 않은 사용자');
+      }
+
+      setIsCheckingAuth(false);
+    };
+
+    checkAuthStatus();
+  }, [navigate]);
 
   const emptyUser = {
     userId: '',
@@ -40,6 +94,19 @@ function Login() {
   const handleActionClick = (id) => {
     navigate('/user/home');
   };
+
+  // 인증 확인 중에는 로딩 표시
+  if (isCheckingAuth) {
+    return (
+      <div className={`theme-${theme} home-page`}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <div style={{ textAlign: 'center', color: '#666' }}>
+            <p>확인 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`theme-${theme} home-page`}>

@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import '../styles/admin.css';
 import '../styles/admin-responsive.css';
 
 function Emergency() {
-  const navigate = useNavigate();
   const [currentFilter, setCurrentFilter] = useState('all');
   const [emergencies, setEmergencies] = useState([]);
   const [activeUsers, setActiveUsers] = useState([]);
@@ -16,30 +14,12 @@ function Emergency() {
     responseTime: 1.2
   });
 
-  // 인증 확인
+  // 데이터 초기화 (인증은 AdminLayout에서 처리)
   useEffect(() => {
-    checkAuthentication();
     initializeData();
-    startRealtimeUpdates();
+    const cleanup = startRealtimeUpdates();
+    return cleanup;
   }, []);
-
-  const checkAuthentication = () => {
-    const currentUser = localStorage.getItem('eume_admin_user');
-    const sessionExpiry = localStorage.getItem('eume_admin_session_expiry');
-
-    if (!currentUser || !sessionExpiry) {
-      navigate('/admin/login');
-      return;
-    }
-
-    const now = Date.now();
-    if (now >= parseInt(sessionExpiry)) {
-      alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-      localStorage.removeItem('eume_admin_user');
-      localStorage.removeItem('eume_admin_session_expiry');
-      navigate('/admin/login');
-    }
-  };
 
   const initializeData = () => {
     setEmergencies(generateEmergencies());

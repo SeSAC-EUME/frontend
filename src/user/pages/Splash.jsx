@@ -2,30 +2,31 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/user.css';
 import logo from '../../shared/assets/logo.png';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 function Splash() {
   const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      // 로그인 토큰 확인
-      const userToken = localStorage.getItem('eume_user_token');
-      const hasVisited = localStorage.getItem('eume_visited');
-      const onboardingComplete = localStorage.getItem('eume_onboarding_complete');
+      // 로그인 상태 확인 (쿠키 기반 인증, localStorage는 캐시)
+      const userInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+      const hasVisited = localStorage.getItem(STORAGE_KEYS.USER_VISITED);
+      const onboardingComplete = localStorage.getItem(STORAGE_KEYS.USER_ONBOARDING);
 
       // 로그인 안 된 경우 -> 로그인 페이지
-      if (!userToken) {
+      if (!userInfo) {
         navigate('/user/login');
         return;
       }
 
       // 로그인 됨 + 온보딩 미완료 -> 온보딩 페이지
-      if (!onboardingComplete && !hasVisited) {
+      if (!onboardingComplete) {
         navigate('/user/onboarding-1');
         return;
       }
 
-      // 로그인 됨 + 온보딩 완료 -> 설정 페이지
+      // 로그인 됨 + 온보딩 완료 -> 홈 페이지
       navigate('/user/home');
     }, 1000);
 

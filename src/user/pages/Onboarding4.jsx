@@ -3,6 +3,8 @@ import '../styles/user.css';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
 import { useTheme } from '../../shared/contexts/ThemeContext';
+import { toBackendTheme } from '../../shared/utils/themeMapper';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 function Onboarding4() {
   const navigate = useNavigate();
@@ -19,79 +21,70 @@ function Onboarding4() {
   const handleComplete = async () => {
     try {
       // localStorage에서 OAuth2 사용자 정보 가져오기
-      const oauthUser = JSON.parse(localStorage.getItem('oauth_user') || '{}');
-      const email = oauthUser.email || localStorage.getItem('eume_email') || '';
+      const oauthUser = JSON.parse(
+        localStorage.getItem(STORAGE_KEYS.OAUTH_USER) || '{}'
+      );
       const userName =
-        localStorage.getItem('eume_realName') || oauthUser.name || '';
-      const nickname = localStorage.getItem('eume_userName') || userName;
-      const birthDate = localStorage.getItem('eume_birthDate') || '';
-      const gender = localStorage.getItem('eume_gender') || '';
-      const phone = localStorage.getItem('eume_phone') || '';
+        localStorage.getItem(STORAGE_KEYS.OAUTH_REALNAME) || oauthUser.name || '';
+      const nickname =
+        localStorage.getItem(STORAGE_KEYS.OAUTH_USERNAME) || userName;
+      const email =
+        localStorage.getItem(STORAGE_KEYS.OAUTH_EMAIL) || oauthUser.email || '';
+      const birthDate = localStorage.getItem(STORAGE_KEYS.OAUTH_BIRTHDATE) || '';
+      const gender = localStorage.getItem(STORAGE_KEYS.OAUTH_GENDER) || '';
+      const phone = localStorage.getItem(STORAGE_KEYS.OAUTH_PHONE) || '';
 
-      // API 요청 데이터 구성
-      const registerData = {
-        email: email,
+      // 프로필 업데이트 데이터 구성 (모든 수집 정보 포함)
+      const profileData = {
         userName: userName,
-        nickname: nickname,
-        loginType: 'SOCIAL',
-        providerId: oauthUser.providerId || null,
-        groupId: null,
-        birthDate: birthDate,
-        gender: gender,
-        phone: phone,
-        profileImage: oauthUser.profileImage || null,
-        backgroundTheme: selectedTheme,
+        nickName: nickname,
+        email: email,
+        birthDate: birthDate || null,
+        gender: gender ? gender.toUpperCase() : null,
+        phone: phone ? phone.replace(/-/g, '') : null,
+        backgroundTheme: toBackendTheme(selectedTheme),
       };
 
-      // API 호출 - axios 인스턴스 사용
-      const result = await axiosInstance.post(
-        API_ENDPOINTS.USER.REGISTER,
-        registerData
+      // API 호출 - PUT /api/users/me (프로필 업데이트)
+      // OAuth2 로그인 시 자동 회원가입이 완료되므로 프로필만 업데이트
+      const result = await axiosInstance.put(
+        API_ENDPOINTS.USER.ME,
+        profileData
       );
 
-      // 회원가입 성공 시 사용자 정보 및 토큰 저장
-      if (result.token) {
-        localStorage.setItem('token', result.token);
-      }
-
+      // 사용자 정보 저장 (토큰은 쿠키로 자동 관리됨)
       const userData = {
-        userId: result.userId,
-        loginId: result.loginId,
-        name: result.name,
+        id: result.id,
         email: result.email,
-        groupId: result.groupId,
-        firstLogin: result.firstLogin,
-        userType: result.userType,
+        nickname: result.nickname,
+        userName: result.userName,
+        backgroundTheme: selectedTheme, // 프론트엔드 테마 저장
         profileImage: result.profileImage,
-        backgroundTheme: selectedTheme,
       };
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userData));
 
       // 테마 및 상태 저장
-      localStorage.setItem('eume_theme', selectedTheme);
-      localStorage.setItem('eume_visited', 'true');
-      localStorage.setItem('eume_onboarding_complete', 'true');
+      localStorage.setItem(STORAGE_KEYS.USER_THEME, selectedTheme);
+      localStorage.setItem(STORAGE_KEYS.USER_VISITED, 'true');
+      localStorage.setItem(STORAGE_KEYS.USER_ONBOARDING, 'true');
 
-      // 임시 데이터 삭제
-      localStorage.removeItem('oauth_user');
-      localStorage.removeItem('eume_email');
-      localStorage.removeItem('eume_realName');
-      localStorage.removeItem('eume_userName');
-      localStorage.removeItem('eume_birthDate');
-      localStorage.removeItem('eume_gender');
-      localStorage.removeItem('eume_phone');
+      // OAuth2 임시 데이터 삭제
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_USER);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_EMAIL);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_REALNAME);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_USERNAME);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_BIRTHDATE);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_GENDER);
+      localStorage.removeItem(STORAGE_KEYS.OAUTH_PHONE);
 
-      // 성공 메시지 표시
-      alert('회원가입이 완료되었습니다!');
-
-      // 설정 페이지로 이동
+      // 홈으로 이동
       navigate('/user/home');
     } catch (error) {
-      console.error('회원가입 오류:', error);
+      console.error('프로필 설정 오류:', error);
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
-        '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.';
+        '프로필 설정 중 오류가 발생했습니다. 다시 시도해주세요.';
       alert(errorMessage);
     }
   };

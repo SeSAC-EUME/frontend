@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import '../styles/admin.css';
 import '../styles/admin-responsive.css';
+import { API_ENDPOINTS } from '../../shared/api/config';
+import axiosInstance from '../../shared/api/axios';
+import axiosBlob, { downloadBlob, extractFilename } from '../../shared/api/axiosBlob';
 
 // 아이콘 import
 import downloadIcon from '../assets/icons/download.svg';
@@ -23,11 +26,13 @@ function Users() {
   const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isLoadingUserDetail, setIsLoadingUserDetail] = useState(false);
 
   const itemsPerPage = 10;
 
-  // 샘플 데이터
-  const usersData = [
+  // 샘플 데이터 (API 폴백용)
+  const sampleUsersData = [
     {
       id: 1,
       name: '김민수',
@@ -174,28 +179,30 @@ function Users() {
     }
   ];
 
-  // 인증 확인
+  // 사용자 목록 로드
+  const [usersData, setUsersData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    checkAuthentication();
+    loadUsers();
   }, []);
 
-  const checkAuthentication = () => {
-    const currentUser = localStorage.getItem('eume_admin_user');
-    const sessionExpiry = localStorage.getItem('eume_admin_session_expiry');
-
-    if (!currentUser || !sessionExpiry) {
-      navigate('/admin/login');
-      return;
-    }
-
-    const now = Date.now();
-    if (now >= parseInt(sessionExpiry)) {
-      alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-      localStorage.removeItem('eume_admin_user');
-      localStorage.removeItem('eume_admin_session_expiry');
-      navigate('/admin/login');
+  const loadUsers = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS);
+      // 백엔드 응답 구조에 따라 조정
+      setUsersData(response.users || response || []);
+    } catch (error) {
+      console.error('사용자 목록 로드 오류:', error);
+      // API 실패 시 샘플 데이터 사용 (개발용)
+      setUsersData(sampleUsersData);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // 샘플 데이터 (API 실패 시 폴백용)
 
   // 필터링 및 검색된 사용자 목록
   const getFilteredUsers = () => {
@@ -286,11 +293,28 @@ function Users() {
     setSelectAll(newSelected.size === pageUsers.length);
   };
 
-  const viewUserDetail = (userId) => {
-    const user = usersData.find(u => u.id === userId);
-    setSelectedUserDetail(user);
+  const viewUserDetail = async (userId) => {
+    setIsLoadingUserDetail(true);
     setShowUserModal(true);
     document.body.style.overflow = 'hidden';
+
+    try {
+      // API에서 실시간 사용자 상세 정보 조회
+      const userDetail = await axiosInstance.get(API_ENDPOINTS.ADMIN.USER_DETAIL(userId));
+      setSelectedUserDetail(userDetail);
+    } catch (error) {
+      console.error('사용자 상세 조회 오류:', error);
+      // API 실패 시 로컬 데이터 사용 (폴백)
+      const user = usersData.find(u => u.id === userId);
+      if (user) {
+        setSelectedUserDetail(user);
+      } else {
+        alert('사용자 정보를 불러올 수 없습니다.');
+        closeUserDetailModal();
+      }
+    } finally {
+      setIsLoadingUserDetail(false);
+    }
   };
 
   const closeUserDetailModal = () => {
@@ -310,8 +334,28 @@ function Users() {
     alert(`사용자 ID ${userId}의 정보 수정 페이지로 이동합니다.\n이 기능은 추후 구현됩니다.`);
   };
 
-  const exportUsers = () => {
-    alert('이용자 데이터를 Excel로 내보냅니다.\n이 기능은 추후 구현됩니다.');
+  const exportUsers = async () => {
+    setIsExporting(true);
+    try {
+      const response = await axiosBlob.get(API_ENDPOINTS.ADMIN.USERS_EXPORT);
+
+      // Content-Disposition에서 파일명 추출 또는 기본값 사용
+      const contentDisposition = response.headers['content-disposition'];
+      const defaultFilename = `users_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const filename = extractFilename(contentDisposition, defaultFilename);
+
+      // MIME 타입 지정하여 다운로드
+      downloadBlob(
+        response.data,
+        filename,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+    } catch (error) {
+      console.error('이용자 데이터 내보내기 오류:', error);
+      alert('Excel 내보내기에 실패했습니다.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const bulkAction = () => {
@@ -360,9 +404,9 @@ function Users() {
         <div className="page-header">
           <h2>이용자 관리</h2>
           <div className="page-actions">
-            <button className="action-button" onClick={exportUsers}>
+            <button className="action-button" onClick={exportUsers} disabled={isExporting}>
               <img src={downloadIcon} alt="내보내기" className="button-icon" />
-              Excel 내보내기
+              {isExporting ? '내보내는 중...' : 'Excel 내보내기'}
             </button>
             <button className="action-button primary" onClick={bulkAction}>
               일괄 작업
@@ -552,14 +596,28 @@ function Users() {
         </div>
 
       {/* 사용자 상세 정보 모달 */}
-      {showUserModal && selectedUserDetail && (
+      {showUserModal && (
         <div className="modal-overlay" style={{ display: 'flex' }} onClick={(e) => { if (e.target.className === 'modal-overlay') closeUserDetailModal(); }}>
           <div className="modal-container" style={{ maxWidth: '1200px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
-              <h3 className="modal-title">{selectedUserDetail.name} 님의 상세 정보</h3>
+              <h3 className="modal-title">
+                {isLoadingUserDetail ? '정보 불러오는 중...' : `${selectedUserDetail?.name || ''} 님의 상세 정보`}
+              </h3>
               <button className="modal-close" onClick={closeUserDetailModal}>×</button>
             </div>
             <div className="modal-body">
+              {isLoadingUserDetail ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--admin-text-light)' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '12px' }}>⏳</div>
+                  <div>사용자 정보를 불러오는 중...</div>
+                </div>
+              ) : !selectedUserDetail ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--admin-text-light)' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '12px' }}>❌</div>
+                  <div>사용자 정보를 불러올 수 없습니다</div>
+                </div>
+              ) : (
+                <>
               {/* 기본 정보 */}
               <div style={{ background: 'var(--admin-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
                 <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--admin-text-dark)' }}>기본 정보</h4>
@@ -647,10 +705,14 @@ function Users() {
                   </div>
                 </div>
               </div>
+                </>
+              )}
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={closeUserDetailModal}>닫기</button>
-              <button className="btn-primary" onClick={() => callGuardian(selectedUserDetail.id)}>보호자 연락</button>
+              {selectedUserDetail && (
+                <button className="btn-primary" onClick={() => callGuardian(selectedUserDetail.id)}>보호자 연락</button>
+              )}
             </div>
           </div>
         </div>
