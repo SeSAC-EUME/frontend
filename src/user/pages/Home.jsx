@@ -3,6 +3,10 @@ import '../styles/user.css';
 import { useTheme } from '../../shared/contexts/ThemeContext';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import { API_ENDPOINTS } from '../../shared/api/config';
+import axiosInstance from '../../shared/api/axios';
+import axiosRaw from '../../shared/api/axiosRaw';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 const pinnedRooms = [
   {
@@ -74,16 +78,53 @@ function Home() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const messagesContainerRef = useRef(null);
 
+  // 사용자 정보 및 채팅방 초기화
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const storedUser = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.USER_INFO) || '{}'
+    );
     setUserInfo({
-      userId: storedUser.userId || '',
+      userId: storedUser.id || storedUser.userId || '',
       email: storedUser.email || '',
-      userName: storedUser.name || '사용자',
+      userName: storedUser.userName || storedUser.name || '사용자',
       nickname: storedUser.nickname || '',
       profileImage: storedUser.profileImage || '',
     });
+
+    // Eume AI 채팅방 초기화
+    initializeEumeChat();
   }, []);
+
+  // Eume AI 채팅방 생성 또는 조회
+  const initializeEumeChat = async () => {
+    try {
+      // POST /api/eume-chats (201: 새로 생성, 409: 이미 존재)
+      const response = await axiosRaw.post(API_ENDPOINTS.EUME_CHAT.CREATE);
+      if (response.status === 201) {
+        console.log('Eume 채팅방 생성:', response.data);
+      }
+    } catch (error) {
+      if (error.response?.status === 409) {
+        // 이미 채팅방 존재 - 기존 채팅 내역 로드
+        console.log('기존 Eume 채팅방 사용');
+        await loadExistingChat();
+      } else {
+        console.error('채팅방 초기화 오류:', error);
+      }
+    }
+  };
+
+  // 기존 채팅 내역 로드
+  const loadExistingChat = async () => {
+    try {
+      const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
+      console.log('기존 채팅 정보:', chatInfo);
+      // 채팅 내역이 있으면 메시지 상태에 반영
+      // 백엔드 응답 구조에 따라 추가 구현 필요
+    } catch (error) {
+      console.error('채팅 내역 로드 오류:', error);
+    }
+  };
 
   const selectedChat = useMemo(() => {
     return (
@@ -130,11 +171,10 @@ function Home() {
     handleSelectRoom(id);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!prompt.trim()) return;
 
     const roomId = selectedChatId;
-    const roomTitle = selectedChat?.title || '이음이';
     const timestamp = new Date().toLocaleTimeString('ko-KR', {
       hour: '2-digit',
       minute: '2-digit',
@@ -151,6 +191,7 @@ function Home() {
       ...prev,
       [roomId]: [...(prev[roomId] || []), userMessage],
     }));
+    const messageText = prompt.trim();
     setPrompt('');
 
     setChatHistory((prev) =>
@@ -161,10 +202,58 @@ function Home() {
 
     setIsStreamingByRoom((prev) => ({ ...prev, [roomId]: true }));
 
-    setTimeout(() => {
-      const aiMessage = {
-        id: `ai-${Date.now()}`,
-        text: `${roomTitle}에서 답변을 준비하고 있어요.`,
+    try {
+      // ieum-talk인 경우 Eume AI API 호출
+      if (roomId === 'ieum-talk') {
+        // 먼저 채팅방 ID 조회
+        const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
+        const chatListId = chatInfo.id;
+
+        // POST /api/eume-chats/{chatListId}/contents
+        const response = await axiosInstance.post(
+          API_ENDPOINTS.EUME_CHAT.CONTENTS(chatListId),
+          { messageContent: messageText }
+        );
+
+        // 백엔드 응답에서 AI 메시지 추출
+        const aiMessage = {
+          id: `ai-${Date.now()}`,
+          text: response.eumeMessage?.messageContent || '답변을 생성할 수 없습니다.',
+          sender: 'ai',
+          timestamp: new Date().toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        };
+
+        setMessagesByRoom((prev) => ({
+          ...prev,
+          [roomId]: [...(prev[roomId] || []), aiMessage],
+        }));
+      } else {
+        // 기타 채팅방은 기존 목업 로직 유지
+        setTimeout(() => {
+          const aiMessage = {
+            id: `ai-${Date.now()}`,
+            text: '이 기능은 아직 준비 중입니다.',
+            sender: 'ai',
+            timestamp: new Date().toLocaleTimeString('ko-KR', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          };
+
+          setMessagesByRoom((prev) => ({
+            ...prev,
+            [roomId]: [...(prev[roomId] || []), aiMessage],
+          }));
+        }, 600);
+      }
+    } catch (error) {
+      console.error('메시지 전송 오류:', error);
+      const errorMessage = {
+        id: `error-${Date.now()}`,
+        text: '메시지 전송 중 오류가 발생했습니다. 다시 시도해주세요.',
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString('ko-KR', {
           hour: '2-digit',
@@ -174,13 +263,14 @@ function Home() {
 
       setMessagesByRoom((prev) => ({
         ...prev,
-        [roomId]: [...(prev[roomId] || []), aiMessage],
+        [roomId]: [...(prev[roomId] || []), errorMessage],
       }));
+    } finally {
       setIsStreamingByRoom((prev) => ({
         ...prev,
         [roomId]: false,
       }));
-    }, 600);
+    }
   };
 
   const handleKeyPress = (e) => {
