@@ -6,6 +6,7 @@
  */
 import axios from 'axios';
 import { JAVA_URL, API_CONFIG } from './config';
+import { showError } from '../utils/toast';
 
 const axiosInstance = axios.create({
   baseURL: JAVA_URL,
@@ -14,11 +15,17 @@ const axiosInstance = axios.create({
   withCredentials: true, // HttpOnly 쿠키 인증
 });
 
+// 개발 모드 확인
+const isDev = import.meta.env.DEV;
+
 // 요청 인터셉터
 axiosInstance.interceptors.request.use(
   (config) => {
     // 쿠키 기반 인증이므로 Authorization 헤더 불필요
-    // 필요 시 여기에 요청 로깅 추가
+    // 개발 모드에서 요청 로깅
+    if (isDev) {
+      console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -27,6 +34,10 @@ axiosInstance.interceptors.request.use(
 // 응답 인터셉터
 axiosInstance.interceptors.response.use(
   (response) => {
+    // 개발 모드에서 응답 로깅
+    if (isDev) {
+      console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+    }
     // 기존 호출부 호환을 위해 response.data 반환
     return response.data;
   },
@@ -44,12 +55,20 @@ axiosInstance.interceptors.response.use(
       }
     }
 
-    // 에러 로깅
+    // 에러 로깅 및 사용자 알림
     if (error.response) {
       console.error(`API Error [${error.response.status}]:`, error.response.data);
+
+      // 서버 에러 (5xx) 시 토스트 표시
+      if (error.response.status >= 500) {
+        showError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      }
     } else if (error.request) {
+      // 네트워크 에러 (응답 없음)
       console.error('No response from server:', error.request);
+      showError('네트워크 연결을 확인해주세요.');
     } else {
+      // 요청 설정 에러
       console.error('Request error:', error.message);
     }
 
