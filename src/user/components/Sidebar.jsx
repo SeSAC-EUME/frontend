@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../shared/assets/logo.svg';
 import { API_ENDPOINTS } from '../../shared/api/config';
@@ -41,6 +42,29 @@ function Sidebar({
   setIsUserMenuOpen,
 }) {
   const navigate = useNavigate();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // 로그인 여부 확인
+  const isLoggedIn = () => {
+    const userInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO);
+    const oauthUser = localStorage.getItem(STORAGE_KEYS.OAUTH_USER);
+    return !!(userInfo || oauthUser);
+  };
+
+  // 채팅 버튼 클릭 핸들러
+  const handleRoomClick = (roomId) => {
+    if (!isLoggedIn()) {
+      setShowLoginModal(true);
+      return;
+    }
+    onActionClick(roomId);
+  };
+
+  // 로그인 페이지로 이동
+  const goToLogin = () => {
+    setShowLoginModal(false);
+    navigate('/user/login');
+  };
 
   const handleLogout = async () => {
     try {
@@ -111,7 +135,7 @@ function Sidebar({
           <button
             key={room.id}
             className={`sidebar-icon-btn group ${selectedChatId === room.id ? 'active' : ''}`}
-            onClick={() => onActionClick(room.id)}
+            onClick={() => handleRoomClick(room.id)}
             title={room.title}
             aria-label={room.title}
           >
@@ -140,6 +164,53 @@ function Sidebar({
           )}
         </div>
       </div>
+
+      {/* 로그인 필요 모달 */}
+      {showLoginModal && (
+        <div
+          className="modal-overlay"
+          style={{ display: 'flex' }}
+          onClick={() => setShowLoginModal(false)}
+        >
+          <div
+            className="modal-container"
+            style={{ maxWidth: '400px', textAlign: 'center' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 className="modal-title">로그인이 필요합니다</h3>
+              <button
+                className="modal-close"
+                onClick={() => setShowLoginModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body" style={{ padding: '24px' }}>
+              <p style={{ marginBottom: '8px', color: '#374151' }}>
+                채팅 기능을 사용하려면 로그인이 필요합니다.
+              </p>
+              <p style={{ color: '#6B7280', fontSize: '14px' }}>
+                Google 계정으로 간편하게 로그인하세요.
+              </p>
+            </div>
+            <div className="modal-footer" style={{ justifyContent: 'center', gap: '12px' }}>
+              <button
+                className="btn-secondary"
+                onClick={() => setShowLoginModal(false)}
+              >
+                취소
+              </button>
+              <button
+                className="btn-primary"
+                onClick={goToLogin}
+              >
+                로그인하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
