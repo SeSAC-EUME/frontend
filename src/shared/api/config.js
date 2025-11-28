@@ -8,21 +8,43 @@ export const JAVA_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/'
 
 // API 엔드포인트 상수
 export const API_ENDPOINTS = {
-  // 관리자 엔드포인트
-  ADMIN: {
-    LOGIN: `${JAVA_URL}admin/login`,
-    REGISTER: `${JAVA_URL}admin/register`,
-    CHANGE_PASSWORD: `${JAVA_URL}admin/change-password`,
-  },
-  // 사용자 엔드포인트
+  // ========== 사용자 API ==========
   USER: {
-    // LOGIN: `${JAVA_URL}user/login`,
-    LOGOUT: `${JAVA_URL}user/logout`,
-    REGISTER: `${JAVA_URL}user/register`,
-    UPDATE: `${JAVA_URL}user/update`,
-    WITHDRAW: `${JAVA_URL}user/withdraw`,
+    ME: `${JAVA_URL}api/users/me`,
+    LOGOUT: `${JAVA_URL}api/users/logout`,
+    WITHDRAW: `${JAVA_URL}api/users/me/withdraw`,
+    DEACTIVATE: `${JAVA_URL}api/users/me/deactivate`,
+    // 주의: REGISTER 없음 (OAuth2 자동 가입)
   },
-  // 추가 엔드포인트는 여기에 정의
+
+  // ========== Eume AI 채팅 API ==========
+  EUME_CHAT: {
+    CREATE: `${JAVA_URL}api/eume-chats`,
+    ME: `${JAVA_URL}api/eume-chats/me`,
+    CONTENTS: (chatListId) => `${JAVA_URL}api/eume-chats/${chatListId}/contents`,
+  },
+
+  // ========== 다중 채팅 API ==========
+  USER_CHAT: {
+    LIST: `${JAVA_URL}api/user-chats`,
+    CREATE: `${JAVA_URL}api/user-chats`,
+    CONTENTS: (chatListId) => `${JAVA_URL}api/user-chats/${chatListId}/contents`,
+  },
+
+  // ========== 관리자 API ==========
+  ADMIN: {
+    LOGIN: `${JAVA_URL}api/admin/login`,
+    LOGOUT: `${JAVA_URL}api/admin/logout`,
+    REGISTER: `${JAVA_URL}api/admin/register`,
+    ORGS: `${JAVA_URL}api/admin/orgs`,  // 무인증 API
+    USERS: `${JAVA_URL}api/admin/users`,
+    USER_DETAIL: (userId) => `${JAVA_URL}api/admin/users/${userId}`,
+    USER_STATUS: (userId) => `${JAVA_URL}api/admin/users/${userId}/status`,
+    USER_EMOTIONS: (userId) => `${JAVA_URL}api/admin/users/${userId}/emotions`,
+    USERS_EXPORT: `${JAVA_URL}api/admin/users/export`,
+    REPORTS_SUMMARY: `${JAVA_URL}api/admin/reports/summary`,
+    REPORTS_EXPORT: `${JAVA_URL}api/admin/reports/export`,
+  },
 };
 
 // API 설정 옵션

@@ -4,26 +4,34 @@ import '../styles/admin.css';
 import logo from '../../shared/assets/logo.svg';
 import lockIcon from '../assets/icons/lock.svg';
 import { API_ENDPOINTS } from '../../shared/api/config';
-import axiosInstance from '../../shared/api/axios';
+import axiosRaw from '../../shared/api/axiosRaw';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
+    sigunguId: '', // 소속기관 ID
     username: '',
     password: '',
-    rememberMe: false
+    rememberMe: false,
   });
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // 기존 세션 확인
+  // 기관 목록 상태
+  const [orgs, setOrgs] = useState([]);
+  const [orgsLoading, setOrgsLoading] = useState(true);
+  const [orgsError, setOrgsError] = useState('');
+
+  // 기존 세션 확인 및 기관 목록 로드
   useEffect(() => {
     checkExistingSession();
+    loadOrganizations();
   }, []);
 
   const checkExistingSession = () => {
-    const currentUser = localStorage.getItem('eume_admin_user');
-    const sessionExpiry = localStorage.getItem('eume_admin_session_expiry');
+    const currentUser = localStorage.getItem(STORAGE_KEYS.ADMIN_USER);
+    const sessionExpiry = localStorage.getItem(STORAGE_KEYS.ADMIN_SESSION_EXPIRY);
 
     if (currentUser && sessionExpiry) {
       const now = Date.now();
@@ -38,15 +46,31 @@ function Login() {
   };
 
   const clearSession = () => {
-    localStorage.removeItem('eume_admin_user');
-    localStorage.removeItem('eume_admin_session_expiry');
+    localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
+    localStorage.removeItem(STORAGE_KEYS.ADMIN_SESSION_EXPIRY);
+  };
+
+  // 기관 목록 로드 (무인증 API)
+  const loadOrganizations = async () => {
+    setOrgsLoading(true);
+    setOrgsError('');
+
+    try {
+      const response = await axiosRaw.get(API_ENDPOINTS.ADMIN.ORGS);
+      setOrgs(response.data); // [{ id: 1, name: "서울시 강남구" }, ...]
+    } catch (error) {
+      console.error('기관 목록 로드 실패:', error);
+      setOrgsError('기관 목록을 불러올 수 없습니다.');
+    } finally {
+      setOrgsLoading(false);
+    }
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : value,
     }));
     // 입력 시 에러 메시지 제거
     if (errorMessage) {
@@ -58,6 +82,11 @@ function Login() {
     e.preventDefault();
 
     // 유효성 검사
+    if (!formData.sigunguId) {
+      setErrorMessage('소속 기관을 선택해주세요.');
+      return;
+    }
+
     if (!formData.username.trim()) {
       setErrorMessage('아이디를 입력해주세요.');
       return;
@@ -72,64 +101,71 @@ function Login() {
     setIsLoading(true);
 
     try {
-      // API 호출 - API_ENDPOINTS 사용
-      const result = await axiosInstance.post(API_ENDPOINTS.ADMIN.LOGIN, {
-        loginId: formData.username,
-        password: formData.password,
-        loginType: 'LOCAL'
+      // axiosRaw 사용 (상태코드 분기 필요)
+      const response = await axiosRaw.post(API_ENDPOINTS.ADMIN.LOGIN, {
+        sigunguId: parseInt(formData.sigunguId), // 숫자로 변환
+        adminLoginId: formData.username,
+        adminPw: formData.password,
       });
 
-      // 로그인 성공 시 사용자 정보 및 토큰 저장
-      if (result.token) {
-        localStorage.setItem('token', result.token);
+      if (response.status === 200) {
+        const result = response.data;
+
+        // 사용자 정보 저장 (토큰은 쿠키로 자동 설정됨)
+        const userData = {
+          id: result.id,
+          adminName: result.adminName,
+          adminEmail: result.adminEmail,
+          lastLoginDate: result.lastLoginDate,
+          sigunguId: formData.sigunguId,
+        };
+
+        // 세션 저장
+        saveSession(userData, formData.rememberMe);
+
+        // 대시보드로 리다이렉트
+        navigate('/admin/dashboard');
       }
-
-      // 사용자 정보 저장
-      const userData = {
-        userId: result.userId,
-        loginId: result.loginId,
-        name: result.name,
-        email: result.email,
-        groupId: result.groupId,
-        firstLogin: result.firstLogin,
-        userType: result.userType,
-        profileImage: result.profileImage,
-        backgroundTheme: result.backgroundTheme
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
-
-      // 세션 저장 (관리자 전용)
-      saveSession(userData, formData.rememberMe);
-
-      // 대시보드로 리다이렉트
-      navigate('/admin/dashboard');
     } catch (error) {
       console.error('로그인 오류:', error);
-      const errorMessage = error.response?.data?.message || error.message || '아이디 또는 비밀번호가 올바르지 않습니다.';
-      setErrorMessage(errorMessage);
+
+      if (error.response?.status === 401) {
+        setErrorMessage('아이디 또는 비밀번호가 올바르지 않습니다.');
+      } else {
+        setErrorMessage(
+          error.response?.data?.message || '로그인 중 오류가 발생했습니다.'
+        );
+      }
       setIsLoading(false);
     }
   };
 
   const saveSession = (userData, rememberMe) => {
     // 사용자 정보 저장
-    localStorage.setItem('eume_admin_user', JSON.stringify(userData));
+    localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(userData));
 
-    // 세션 만료 시간 설정 (기본 2시간)
-    const expiryTime = Date.now() + (rememberMe ? 7 * 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000);
-    localStorage.setItem('eume_admin_session_expiry', expiryTime.toString());
+    // 세션 만료 시간 설정 (기본 2시간, rememberMe 시 7일)
+    const expiryTime =
+      Date.now() +
+      (rememberMe ? 7 * 24 * 60 * 60 * 1000 : 2 * 60 * 60 * 1000);
+    localStorage.setItem(STORAGE_KEYS.ADMIN_SESSION_EXPIRY, expiryTime.toString());
 
     // 로그인 기록
-    const loginHistory = JSON.parse(localStorage.getItem('eume_admin_login_history') || '[]');
+    const loginHistory = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.ADMIN_LOGIN_HISTORY) || '[]'
+    );
     loginHistory.push({
-      username: userData.username,
-      time: userData.loginTime
+      adminName: userData.adminName,
+      time: new Date().toISOString(),
     });
     // 최근 10개만 유지
     if (loginHistory.length > 10) {
       loginHistory.shift();
     }
-    localStorage.setItem('eume_admin_login_history', JSON.stringify(loginHistory));
+    localStorage.setItem(
+      STORAGE_KEYS.ADMIN_LOGIN_HISTORY,
+      JSON.stringify(loginHistory)
+    );
   };
 
   const handleForgotPassword = (e) => {
@@ -144,19 +180,53 @@ function Login() {
         <div className="login-header">
           <img src={logo} alt="이음이 로고" className="admin-logo" />
           <h1>이음이 관리 시스템</h1>
-          <p className="subtitle">서울시 고립은둔청년 정서 돌봄 AI 복지 에이전트</p>
+          <p className="subtitle">
+            서울시 고립은둔청년 정서 돌봄 AI 복지 에이전트
+          </p>
         </div>
 
         {/* 로그인 폼 */}
         <div className="login-form-wrapper">
           {/* 에러 메시지 */}
           {errorMessage && (
-            <div className="error-message show">
-              {errorMessage}
-            </div>
+            <div className="error-message show">{errorMessage}</div>
           )}
 
           <form className="login-form" onSubmit={handleSubmit}>
+            {/* 소속기관 선택 */}
+            <div className="form-group">
+              <label htmlFor="sigunguId">소속 기관</label>
+              {orgsLoading ? (
+                <div className="loading-text">기관 목록 로딩 중...</div>
+              ) : orgsError ? (
+                <div className="error-group">
+                  <p className="error-text">{orgsError}</p>
+                  <button
+                    type="button"
+                    className="retry-button"
+                    onClick={loadOrganizations}
+                  >
+                    재시도
+                  </button>
+                </div>
+              ) : (
+                <select
+                  id="sigunguId"
+                  name="sigunguId"
+                  value={formData.sigunguId}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">소속 기관을 선택하세요</option>
+                  {orgs.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             {/* 아이디 입력 */}
             <div className="form-group">
               <label htmlFor="username">아이디</label>
@@ -199,7 +269,11 @@ function Login() {
                 />
                 <span>로그인 상태 유지</span>
               </label>
-              <a href="#" className="forgot-password" onClick={handleForgotPassword}>
+              <a
+                href="#"
+                className="forgot-password"
+                onClick={handleForgotPassword}
+              >
                 비밀번호 찾기
               </a>
             </div>
@@ -208,7 +282,7 @@ function Login() {
             <button
               type="submit"
               className="login-button"
-              disabled={isLoading}
+              disabled={isLoading || orgsLoading}
             >
               {isLoading ? '로그인 중...' : '로그인'}
             </button>
@@ -220,7 +294,7 @@ function Login() {
               style={{
                 marginTop: '8px',
                 backgroundColor: '#10B981',
-                border: '1px solid #10B981'
+                border: '1px solid #10B981',
               }}
               onClick={() => {
                 alert('회원가입 기능은 준비 중입니다.');
@@ -236,26 +310,26 @@ function Login() {
               style={{
                 marginTop: '8px',
                 backgroundColor: '#6c757d',
-                border: '1px solid #6c757d'
+                border: '1px solid #6c757d',
               }}
               onClick={() => {
                 // 개발용 더미 데이터 저장
                 const devUserData = {
-                  userId: 'dev-admin-001',
-                  loginId: 'admin',
-                  name: '개발자',
-                  email: 'dev@admin.com',
-                  groupId: 'admin-group',
-                  firstLogin: false,
-                  userType: 'ADMIN',
-                  profileImage: null,
-                  backgroundTheme: 'default'
+                  id: 1,
+                  adminName: '개발자',
+                  adminEmail: 'dev@admin.com',
+                  lastLoginDate: new Date().toISOString(),
+                  sigunguId: 1,
                 };
-                localStorage.setItem('user', JSON.stringify(devUserData));
-                localStorage.setItem('token', 'dev-token-12345');
-                localStorage.setItem('eume_admin_user', JSON.stringify(devUserData));
-                const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000);
-                localStorage.setItem('eume_admin_session_expiry', expiryTime.toString());
+                localStorage.setItem(
+                  STORAGE_KEYS.ADMIN_USER,
+                  JSON.stringify(devUserData)
+                );
+                const expiryTime = Date.now() + 7 * 24 * 60 * 60 * 1000;
+                localStorage.setItem(
+                  STORAGE_KEYS.ADMIN_SESSION_EXPIRY,
+                  expiryTime.toString()
+                );
                 navigate('/admin/dashboard');
               }}
             >
