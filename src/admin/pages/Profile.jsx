@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import '../styles/admin.css';
 import '../styles/admin-responsive.css';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 // 아이콘 import
 import userIcon from '../assets/icons/user.svg';
@@ -11,7 +12,9 @@ import settingsIcon from '../assets/icons/settings.svg';
 
 function Profile() {
   const navigate = useNavigate();
-  const currentUser = JSON.parse(localStorage.getItem('eume_admin_user') || '{}');
+  const currentUser = JSON.parse(
+    localStorage.getItem(STORAGE_KEYS.ADMIN_USER) || '{}'
+  );
 
   const [activeTab, setActiveTab] = useState('profile');
   const [profileData, setProfileData] = useState({
