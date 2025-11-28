@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import '../styles/admin.css';
 import '../styles/admin-responsive.css';
+import { API_ENDPOINTS } from '../../shared/api/config';
+import axiosInstance from '../../shared/api/axios';
 
 // 아이콘 import
 import downloadIcon from '../assets/icons/download.svg';
@@ -26,8 +28,8 @@ function Users() {
 
   const itemsPerPage = 10;
 
-  // 샘플 데이터
-  const usersData = [
+  // 샘플 데이터 (API 폴백용)
+  const sampleUsersData = [
     {
       id: 1,
       name: '김민수',
@@ -174,28 +176,30 @@ function Users() {
     }
   ];
 
-  // 인증 확인
+  // 사용자 목록 로드
+  const [usersData, setUsersData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    checkAuthentication();
+    loadUsers();
   }, []);
 
-  const checkAuthentication = () => {
-    const currentUser = localStorage.getItem('eume_admin_user');
-    const sessionExpiry = localStorage.getItem('eume_admin_session_expiry');
-
-    if (!currentUser || !sessionExpiry) {
-      navigate('/admin/login');
-      return;
-    }
-
-    const now = Date.now();
-    if (now >= parseInt(sessionExpiry)) {
-      alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-      localStorage.removeItem('eume_admin_user');
-      localStorage.removeItem('eume_admin_session_expiry');
-      navigate('/admin/login');
+  const loadUsers = async () => {
+    setIsLoading(true);
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS);
+      // 백엔드 응답 구조에 따라 조정
+      setUsersData(response.users || response || []);
+    } catch (error) {
+      console.error('사용자 목록 로드 오류:', error);
+      // API 실패 시 샘플 데이터 사용 (개발용)
+      setUsersData(sampleUsersData);
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // 샘플 데이터 (API 실패 시 폴백용)
 
   // 필터링 및 검색된 사용자 목록
   const getFilteredUsers = () => {

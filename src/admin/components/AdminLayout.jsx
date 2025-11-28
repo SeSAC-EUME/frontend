@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../styles/admin.css';
 import '../styles/admin-responsive.css';
+import { API_ENDPOINTS } from '../../shared/api/config';
+import axiosInstance from '../../shared/api/axios';
+import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 // 아이콘 import
 import menuIcon from '../assets/icons/menu.svg';
@@ -32,10 +35,10 @@ function AdminLayout({ children }) {
   }, []);
 
   const checkAuthentication = () => {
-    const currentUser = localStorage.getItem('eume_admin_user');
-    const sessionExpiry = localStorage.getItem('eume_admin_session_expiry');
+    const adminUser = localStorage.getItem(STORAGE_KEYS.ADMIN_USER);
+    const sessionExpiry = localStorage.getItem(STORAGE_KEYS.ADMIN_SESSION_EXPIRY);
 
-    if (!currentUser || !sessionExpiry) {
+    if (!adminUser || !sessionExpiry) {
       navigate('/admin/login');
       return;
     }
@@ -43,21 +46,32 @@ function AdminLayout({ children }) {
     const now = Date.now();
     if (now >= parseInt(sessionExpiry)) {
       alert('세션이 만료되었습니다. 다시 로그인해주세요.');
-      localStorage.removeItem('eume_admin_user');
-      localStorage.removeItem('eume_admin_session_expiry');
+      localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
+      localStorage.removeItem(STORAGE_KEYS.ADMIN_SESSION_EXPIRY);
       navigate('/admin/login');
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm('로그아웃 하시겠습니까?')) {
-      localStorage.removeItem('eume_admin_user');
-      localStorage.removeItem('eume_admin_session_expiry');
+      try {
+        // 백엔드 로그아웃 API 호출
+        await axiosInstance.post(API_ENDPOINTS.ADMIN.LOGOUT);
+      } catch (error) {
+        console.error('로그아웃 API 오류:', error);
+      }
+
+      // localStorage 정리
+      localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
+      localStorage.removeItem(STORAGE_KEYS.ADMIN_SESSION_EXPIRY);
+      localStorage.removeItem(STORAGE_KEYS.ADMIN_LOGIN_HISTORY);
       navigate('/admin/login');
     }
   };
 
-  const currentUser = JSON.parse(localStorage.getItem('eume_admin_user') || '{}');
+  const currentUser = JSON.parse(
+    localStorage.getItem(STORAGE_KEYS.ADMIN_USER) || '{}'
+  );
 
   // 현재 경로에 따라 active 메뉴 결정
   const isActive = (path) => location.pathname === path;
