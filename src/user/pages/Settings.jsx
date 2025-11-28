@@ -6,7 +6,7 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
-import { STORAGE_KEYS } from '../../shared/constants/storage';
+import { STORAGE_KEYS, clearAllUserData } from '../../shared/constants/storage';
 import { toBackendTheme } from '../../shared/utils/themeMapper';
 
 function Settings() {
@@ -286,21 +286,9 @@ function Settings() {
 
   // 로컬 데이터 정리 및 로그인 페이지로 이동
   const performLogout = () => {
-    // localStorage 정리
-    localStorage.removeItem(STORAGE_KEYS.USER_INFO);
-    localStorage.removeItem(STORAGE_KEYS.USER_THEME);
-    localStorage.removeItem(STORAGE_KEYS.USER_ONBOARDING);
-    localStorage.removeItem(STORAGE_KEYS.USER_VISITED);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_USER);
+    // localStorage 정리 (테마 제외 모든 사용자 데이터 삭제)
+    clearAllUserData();
     localStorage.removeItem('eume_settings');
-
-    // OAuth 임시 데이터 삭제
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_EMAIL);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_REALNAME);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_USERNAME);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_BIRTHDATE);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_GENDER);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_PHONE);
 
     navigate('/user/login');
   };
@@ -316,21 +304,9 @@ function Settings() {
         // API 실패해도 로컬 데이터는 삭제
       }
 
-      // localStorage 정리
-      localStorage.removeItem(STORAGE_KEYS.USER_INFO);
-      localStorage.removeItem(STORAGE_KEYS.USER_THEME);
-      localStorage.removeItem(STORAGE_KEYS.USER_ONBOARDING);
-      localStorage.removeItem(STORAGE_KEYS.USER_VISITED);
-      localStorage.removeItem(STORAGE_KEYS.OAUTH_USER);
+      // localStorage 정리 (테마 제외 모든 사용자 데이터 삭제)
+      clearAllUserData();
       localStorage.removeItem('eume_settings');
-
-      // OAuth 임시 데이터 삭제
-      localStorage.removeItem(STORAGE_KEYS.OAUTH_EMAIL);
-      localStorage.removeItem(STORAGE_KEYS.OAUTH_REALNAME);
-      localStorage.removeItem(STORAGE_KEYS.OAUTH_USERNAME);
-      localStorage.removeItem(STORAGE_KEYS.OAUTH_BIRTHDATE);
-      localStorage.removeItem(STORAGE_KEYS.OAUTH_GENDER);
-      localStorage.removeItem(STORAGE_KEYS.OAUTH_PHONE);
 
       showToast('로그아웃되었습니다');
       setTimeout(() => {

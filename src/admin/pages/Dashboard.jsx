@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
+import axiosBlob, { downloadBlob, extractFilename } from '../../shared/api/axiosBlob';
 
 // 아이콘 import
 import downloadIcon from '../assets/icons/download.svg';
@@ -55,19 +56,19 @@ function Dashboard() {
   const downloadReport = async () => {
     setIsDownloading(true);
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.REPORTS_EXPORT, {
-        responseType: 'blob',
-      });
+      const response = await axiosBlob.get(API_ENDPOINTS.ADMIN.REPORTS_EXPORT);
 
-      // 파일 다운로드 처리
-      const url = window.URL.createObjectURL(new Blob([response]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `report_${new Date().toISOString().split('T')[0]}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      // Content-Disposition에서 파일명 추출 또는 기본값 사용
+      const contentDisposition = response.headers['content-disposition'];
+      const defaultFilename = `report_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const filename = extractFilename(contentDisposition, defaultFilename);
+
+      // MIME 타입 지정하여 다운로드
+      downloadBlob(
+        response.data,
+        filename,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
     } catch (error) {
       console.error('보고서 다운로드 오류:', error);
       alert('보고서 다운로드에 실패했습니다.');

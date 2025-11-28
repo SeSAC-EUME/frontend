@@ -19,10 +19,35 @@ export const STORAGE_KEYS = {
   OAUTH_GENDER: 'eume_gender',
   OAUTH_PHONE: 'eume_phone',
 
+  // ========== 채팅 ==========
+  EUME_CHAT_ID: 'eume_chat_id', // Eume AI 채팅방 ID
+
   // ========== 관리자 ==========
   ADMIN_USER: 'eume_admin_user', // 관리자 정보 (JSON)
   ADMIN_SESSION_EXPIRY: 'eume_admin_session_expiry', // 세션 만료 시간
   ADMIN_LOGIN_HISTORY: 'eume_admin_login_history', // 로그인 기록
+};
+
+/**
+ * 사용자 데이터 전체 삭제 (로그아웃/탈퇴 시 사용)
+ * 테마는 유지
+ */
+export const clearAllUserData = () => {
+  const keysToRemove = [
+    STORAGE_KEYS.USER_INFO,
+    STORAGE_KEYS.USER_VISITED,
+    STORAGE_KEYS.USER_ONBOARDING,
+    STORAGE_KEYS.OAUTH_USER,
+    STORAGE_KEYS.OAUTH_EMAIL,
+    STORAGE_KEYS.OAUTH_REALNAME,
+    STORAGE_KEYS.OAUTH_USERNAME,
+    STORAGE_KEYS.OAUTH_BIRTHDATE,
+    STORAGE_KEYS.OAUTH_GENDER,
+    STORAGE_KEYS.OAUTH_PHONE,
+    STORAGE_KEYS.EUME_CHAT_ID,
+  ];
+
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
 };
 
 /**

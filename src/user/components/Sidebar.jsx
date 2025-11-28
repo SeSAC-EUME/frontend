@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import logo from '../../shared/assets/logo.svg';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
-import { STORAGE_KEYS } from '../../shared/constants/storage';
+import { STORAGE_KEYS, clearAllUserData } from '../../shared/constants/storage';
 
 const pinnedRooms = [
   {
@@ -74,20 +74,8 @@ function Sidebar({
       console.error('로그아웃 API 오류:', error);
     }
 
-    // localStorage 정리
-    localStorage.removeItem(STORAGE_KEYS.USER_INFO);
-    localStorage.removeItem(STORAGE_KEYS.USER_THEME);
-    localStorage.removeItem(STORAGE_KEYS.USER_ONBOARDING);
-    localStorage.removeItem(STORAGE_KEYS.USER_VISITED);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_USER);
-
-    // OAuth 임시 데이터 삭제
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_EMAIL);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_REALNAME);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_USERNAME);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_BIRTHDATE);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_GENDER);
-    localStorage.removeItem(STORAGE_KEYS.OAUTH_PHONE);
+    // localStorage 정리 (테마 제외 모든 사용자 데이터 삭제)
+    clearAllUserData();
 
     setIsUserMenuOpen(false);
     navigate('/user/login');

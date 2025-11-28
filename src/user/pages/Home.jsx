@@ -77,6 +77,7 @@ function Home() {
   const [userInfo, setUserInfo] = useState(emptyUser);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [chatListId, setChatListId] = useState(null);
+  const [isLoadingChat, setIsLoadingChat] = useState(true); // 채팅 로딩 상태
   const messagesContainerRef = useRef(null);
 
   // 사용자 정보 및 채팅방 초기화
@@ -98,14 +99,25 @@ function Home() {
 
   // Eume AI 채팅방 생성 또는 조회
   const initializeEumeChat = async () => {
+    setIsLoadingChat(true);
     try {
-      // POST /api/eume-chats (201: 새로 생성, 409: 이미 존재)
+      // 1. localStorage에서 캐시된 chatListId 확인
+      const cachedChatId = localStorage.getItem(STORAGE_KEYS.EUME_CHAT_ID);
+      if (cachedChatId) {
+        console.log('캐시된 채팅방 ID 사용:', cachedChatId);
+        setChatListId(cachedChatId);
+        await loadChatContents(cachedChatId);
+        return;
+      }
+
+      // 2. POST /api/eume-chats (201: 새로 생성, 409: 이미 존재)
       const response = await axiosRaw.post(API_ENDPOINTS.EUME_CHAT.CREATE);
       if (response.status === 201) {
         console.log('Eume 채팅방 생성:', response.data);
-        // 새로 생성된 채팅방 ID 저장
-        if (response.data?.id) {
-          setChatListId(response.data.id);
+        const newChatId = response.data?.id;
+        if (newChatId) {
+          setChatListId(newChatId);
+          localStorage.setItem(STORAGE_KEYS.EUME_CHAT_ID, newChatId);
         }
       }
     } catch (error) {
@@ -116,30 +128,54 @@ function Home() {
       } else {
         console.error('채팅방 초기화 오류:', error);
       }
+    } finally {
+      setIsLoadingChat(false);
     }
   };
 
-  // 기존 채팅 내역 로드
+  // 기존 채팅방 정보 조회 후 내역 로드
   const loadExistingChat = async () => {
     try {
+      // GET /api/eume-chats/me 로 채팅방 정보 조회
       const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
       console.log('기존 채팅 정보:', chatInfo);
 
-      // 채팅방 ID 저장
       if (chatInfo.id) {
         setChatListId(chatInfo.id);
-      }
+        localStorage.setItem(STORAGE_KEYS.EUME_CHAT_ID, chatInfo.id);
 
-      // 채팅 내역이 있으면 메시지 상태에 반영
-      if (chatInfo.contents && chatInfo.contents.length > 0) {
-        const loadedMessages = chatInfo.contents.map((content, index) => ({
+        // 채팅 내역 로드
+        await loadChatContents(chatInfo.id);
+      }
+    } catch (error) {
+      console.error('채팅방 조회 오류:', error);
+    }
+  };
+
+  // 채팅 내역 로드 (GET /api/eume-chats/{id}/contents)
+  const loadChatContents = async (chatId) => {
+    try {
+      const contentsResponse = await axiosInstance.get(
+        API_ENDPOINTS.EUME_CHAT.CONTENTS(chatId)
+      );
+      console.log('채팅 내역:', contentsResponse);
+
+      // 응답이 배열인 경우 (메시지 목록)
+      const contents = Array.isArray(contentsResponse)
+        ? contentsResponse
+        : contentsResponse.contents || contentsResponse.messages || [];
+
+      if (contents.length > 0) {
+        const loadedMessages = contents.map((content, index) => ({
           id: `loaded-${content.id || index}`,
-          text: content.messageContent,
-          sender: content.messageType === 'USER' ? 'user' : 'ai',
-          timestamp: new Date(content.createdAt).toLocaleTimeString('ko-KR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
+          text: content.messageContent || content.content || content.message,
+          sender: content.messageType === 'USER' || content.sender === 'user' ? 'user' : 'ai',
+          timestamp: content.createdAt
+            ? new Date(content.createdAt).toLocaleTimeString('ko-KR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : '',
         }));
 
         setMessagesByRoom((prev) => ({
@@ -148,7 +184,10 @@ function Home() {
         }));
       }
     } catch (error) {
-      console.error('채팅 내역 로드 오류:', error);
+      // 404는 아직 대화 내역이 없는 경우 - 정상
+      if (error.response?.status !== 404) {
+        console.error('채팅 내역 로드 오류:', error);
+      }
     }
   };
 
@@ -330,7 +369,13 @@ function Home() {
         <Header isSidebarOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
 
         <div className="chat-messages" ref={messagesContainerRef}>
-          {!hasMessages ? (
+          {isLoadingChat && selectedChatId === 'ieum-talk' ? (
+            <div className="chat-welcome">
+              <div style={{ textAlign: 'center', color: '#666' }}>
+                <p>대화 내역을 불러오는 중...</p>
+              </div>
+            </div>
+          ) : !hasMessages ? (
             <div className="chat-welcome">
               <h2 className="welcome-title">어디서부터 시작할까요?</h2>
               <div className="prompt-bar prompt-bar-large">
