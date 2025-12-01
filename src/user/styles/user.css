@@ -5991,6 +5991,7 @@ body.dark-mode {
     font-size: var(--text-lg);
     line-height: 1.6;
     word-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 .message.user .message-text {
