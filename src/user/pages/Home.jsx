@@ -432,10 +432,20 @@ function Home() {
         }
 
         // POST /api/eume-chats/{chatListId}/contents
+        console.log('=== EUME_CHAT API 요청 ===');
+        console.log('URL:', API_ENDPOINTS.EUME_CHAT.CONTENTS(currentChatListId));
+        console.log('Body:', { messageContent: messageText });
+
         const response = await axiosInstance.post(
           API_ENDPOINTS.EUME_CHAT.CONTENTS(currentChatListId),
           { messageContent: messageText }
         );
+
+        console.log('=== EUME_CHAT API 응답 ===');
+        console.log('Response:', response);
+        console.log('Response type:', typeof response);
+        console.log('Response keys:', response ? Object.keys(response) : 'null');
+        console.log('===========================');
 
         // 백엔드 응답에서 AI 메시지 추출
         const aiMessage = {
@@ -480,7 +490,7 @@ function Home() {
         // 백엔드 응답에서 AI 메시지 추출
         const aiMessage = {
           id: `ai-${Date.now()}`,
-          text: response.aiMessage?.messageContent || response.message || '답변을 생성할 수 없습니다.',
+          text: response.eumeMessage?.messageContent || response.message || '답변을 생성할 수 없습니다.',
           sender: 'ai',
           timestamp: new Date().toLocaleTimeString('ko-KR', {
             hour: '2-digit',
@@ -494,10 +504,20 @@ function Home() {
         }));
       }
     } catch (error) {
-      console.error('메시지 전송 오류:', error);
+      // 디버깅 로그
+      console.error('=== 메시지 전송 오류 상세 ===');
+      console.error('Error object:', error);
+      console.error('Error message:', error.message);
+      console.error('Error response:', error.response);
+      console.error('Error response status:', error.response?.status);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error code:', error.code);
+      console.error('Is timeout?:', error.code === 'ECONNABORTED');
+      console.error('============================');
+
       const errorMessage = {
         id: `error-${Date.now()}`,
-        text: '메시지 전송 중 오류가 발생했습니다. 다시 시도해주세요.',
+        text: `메시지 전송 중 오류가 발생했습니다. (${error.code || error.response?.status || 'unknown'})`,
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString('ko-KR', {
           hour: '2-digit',
