@@ -480,7 +480,7 @@ function Home() {
         // 백엔드 응답에서 AI 메시지 추출
         const aiMessage = {
           id: `ai-${Date.now()}`,
-          text: response.aiMessage?.messageContent || response.message || '답변을 생성할 수 없습니다.',
+          text: response.eumeMessage?.messageContent || response.message || '답변을 생성할 수 없습니다.',
           sender: 'ai',
           timestamp: new Date().toLocaleTimeString('ko-KR', {
             hour: '2-digit',

@@ -50,7 +50,7 @@ export const API_ENDPOINTS = {
 
 // API 설정 옵션
 export const API_CONFIG = {
-  timeout: 10000, // 10초
+  timeout: 60000, // 60초
   headers: {
     'Content-Type': 'application/json',
   },
