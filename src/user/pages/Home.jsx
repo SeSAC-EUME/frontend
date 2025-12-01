@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../styles/user.css';
 import { useTheme } from '../../shared/contexts/ThemeContext';
 import Header from '../components/Header';
@@ -67,6 +68,7 @@ const emptyUser = {
 };
 
 function Home() {
+  const navigate = useNavigate();
   const { theme: currentTheme } = useTheme();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
@@ -78,27 +80,61 @@ function Home() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [chatListId, setChatListId] = useState(null);
   const [isLoadingChat, setIsLoadingChat] = useState(true); // 채팅 로딩 상태
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true); // 인증 확인 상태
   const messagesContainerRef = useRef(null);
 
-  // 사용자 정보 및 채팅방 초기화
+  // 인증 확인 및 사용자 정보 초기화
   useEffect(() => {
-    const storedUser = JSON.parse(
-      localStorage.getItem(STORAGE_KEYS.USER_INFO) || '{}'
-    );
-    setUserInfo({
-      userId: storedUser.id || storedUser.userId || '',
-      email: storedUser.email || '',
-      userName: storedUser.userName || storedUser.name || '사용자',
-      nickname: storedUser.nickname || '',
-      profileImage: storedUser.profileImage || '',
-    });
+    const initializeUser = async () => {
+      try {
+        // 1. localStorage에서 사용자 정보 확인
+        const storedUserStr = localStorage.getItem(STORAGE_KEYS.USER_INFO);
 
-    // Eume AI 채팅방 초기화
-    initializeEumeChat();
+        if (!storedUserStr) {
+          // localStorage에 정보 없음 - 로그인 페이지로
+          console.log('사용자 정보 없음 - 로그인 페이지로 이동');
+          navigate('/user/login', { replace: true });
+          return;
+        }
 
-    // 사용자 채팅 목록 로드
-    loadUserChatList();
-  }, []);
+        const storedUser = JSON.parse(storedUserStr);
+
+        // 2. 사용자 정보 설정
+        setUserInfo({
+          userId: storedUser.id || storedUser.userId || '',
+          email: storedUser.email || '',
+          userName: storedUser.userName || storedUser.name || '사용자',
+          nickname: storedUser.nickname || '',
+          profileImage: storedUser.profileImage || '',
+        });
+
+        // 3. 백엔드 인증 확인 (선택적)
+        try {
+          await axiosInstance.get(API_ENDPOINTS.USER.ME);
+        } catch (error) {
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            // 인증 실패 - localStorage 정리 후 로그인 페이지로
+            console.log('인증 실패 - 로그인 페이지로 이동');
+            localStorage.removeItem(STORAGE_KEYS.USER_INFO);
+            localStorage.removeItem(STORAGE_KEYS.USER_THEME);
+            localStorage.removeItem(STORAGE_KEYS.EUME_CHAT_ID);
+            navigate('/user/login', { replace: true });
+            return;
+          }
+        }
+
+        // 4. 인증 완료 - 채팅 초기화
+        setIsCheckingAuth(false);
+        initializeEumeChat();
+        loadUserChatList();
+      } catch (error) {
+        console.error('사용자 초기화 오류:', error);
+        navigate('/user/login', { replace: true });
+      }
+    };
+
+    initializeUser();
+  }, [navigate]);
 
   // 사용자 채팅 목록 로드 (GET /api/user-chats)
   const loadUserChatList = async () => {
@@ -489,6 +525,19 @@ function Home() {
   };
 
   const hasMessages = currentMessages.length > 0;
+
+  // 인증 확인 중에는 로딩 표시
+  if (isCheckingAuth) {
+    return (
+      <div className={`theme-${currentTheme} home-page`}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <div style={{ textAlign: 'center', color: '#666' }}>
+            <p>로딩 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`theme-${currentTheme} home-page`}>

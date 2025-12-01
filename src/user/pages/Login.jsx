@@ -25,23 +25,25 @@ function Login() {
       const oauthUser = localStorage.getItem(STORAGE_KEYS.OAUTH_USER);
       const onboardingComplete = localStorage.getItem(STORAGE_KEYS.USER_ONBOARDING);
 
+      // 1. 이미 로그인 완료된 사용자
       if (userInfo) {
-        // 온보딩 완료된 사용자 -> 홈으로
-        navigate('/user/home');
+        console.log('이미 로그인된 사용자 - 홈으로 리다이렉트');
+        navigate('/user/home', { replace: true });
         return;
       }
 
+      // 2. OAuth 로그인 후 온보딩 진행 중
       if (oauthUser && !onboardingComplete) {
-        // OAuth 로그인했지만 온보딩 미완료 -> 온보딩으로
-        navigate('/user/onboarding-1');
+        console.log('온보딩 진행 중 - 온보딩 페이지로 리다이렉트');
+        navigate('/user/onboarding-1', { replace: true });
         return;
       }
 
-      // localStorage에 정보가 없지만, 쿠키로 인증되어 있을 수 있음
-      // 백엔드 API로 확인
+      // 3. localStorage에 정보가 없지만, 쿠키로 인증되어 있을 수 있음
       try {
         const userData = await axiosInstance.get(API_ENDPOINTS.USER.ME);
         if (userData && userData.email) {
+          console.log('쿠키 인증 성공 - 사용자 정보 저장 후 홈으로 리다이렉트');
           // 인증된 사용자 - localStorage에 정보 저장
           const userInfoToSave = {
             id: userData.id,
@@ -54,12 +56,12 @@ function Login() {
           localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfoToSave));
           localStorage.setItem(STORAGE_KEYS.USER_THEME, userInfoToSave.backgroundTheme || 'ocean');
           localStorage.setItem(STORAGE_KEYS.USER_VISITED, 'true');
-          navigate('/user/home');
+          navigate('/user/home', { replace: true });
           return;
         }
       } catch (err) {
         // 인증되지 않은 사용자 - 로그인 페이지 표시
-        console.log('인증되지 않은 사용자');
+        console.log('인증되지 않은 사용자 - 로그인 페이지 표시');
       }
 
       setIsCheckingAuth(false);

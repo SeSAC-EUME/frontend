@@ -4,7 +4,8 @@
  */
 
 // 환경 변수에서 API URL 가져오기
-export const JAVA_URL = import.meta.env.VITE_API_URL || 'https://www.shutter-heroes.site/';
+// 개발: / (Vite 프록시), 프로덕션: / (Nginx 프록시)
+export const JAVA_URL = import.meta.env.VITE_API_URL || '/';
 
 // API 엔드포인트 상수
 export const API_ENDPOINTS = {

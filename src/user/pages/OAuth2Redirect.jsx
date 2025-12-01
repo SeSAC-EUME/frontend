@@ -26,7 +26,7 @@ function OAuth2Redirect() {
         console.log('에러 파라미터 감지:', errorParam);
         setError('소셜 로그인에 실패했습니다. 다시 시도해주세요.');
         setTimeout(() => {
-          navigate('/user/login');
+          navigate('/user/login', { replace: true });
         }, 2000);
         return;
       }
@@ -52,7 +52,7 @@ function OAuth2Redirect() {
         console.log('필수 파라미터 누락:', { email });
         setError('사용자 정보를 가져올 수 없습니다.');
         setTimeout(() => {
-          navigate('/user/login');
+          navigate('/user/login', { replace: true });
         }, 2000);
         return;
       }
@@ -75,7 +75,7 @@ function OAuth2Redirect() {
 
         // 신규 사용자 - 온보딩 1단계로 이동
         console.log('신규 사용자 -> /user/onboarding-1로 이동');
-        navigate('/user/onboarding-1');
+        navigate('/user/onboarding-1', { replace: true });
       } else {
         // 기존 사용자 - 사용자 정보 저장 후 홈으로 이동
         const userInfo = {
@@ -89,16 +89,17 @@ function OAuth2Redirect() {
         localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo));
         localStorage.setItem(STORAGE_KEYS.USER_THEME, theme);
         localStorage.setItem(STORAGE_KEYS.USER_VISITED, 'true');
-        console.log('기존 사용자 정보 저장:', userInfo);
+        console.log('기존 사용자 정보 저장 완료:', userInfo);
 
-        navigate('/user/home');
+        // replace: true를 사용하여 뒤로가기 시 OAuth 리다이렉트 페이지로 돌아가지 않도록 함
+        navigate('/user/home', { replace: true });
       }
       console.log('=== OAuth2 리다이렉트 처리 완료 ===');
     } catch (error) {
       console.error('OAuth2 리다이렉트 처리 오류:', error);
       setError('로그인 처리 중 오류가 발생했습니다.');
       setTimeout(() => {
-        navigate('/user/login');
+        navigate('/user/login', { replace: true });
       }, 2000);
     }
   };
