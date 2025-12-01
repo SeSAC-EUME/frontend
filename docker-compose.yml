@@ -1,20 +1,18 @@
 version: '3.8'
 
 services:
-  # React 프론트엔드
+  # React 프론트엔드 (nginx로 정적 파일 서빙)
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/
     container_name: eume-frontend
     ports:
-      - "3000:80"
-    environment:
-      - VITE_API_URL=http://backend:8080/
+      - "3000:3000"
     networks:
       - eume-network
-    depends_on:
-      - backend
 
   # Spring Boot 백엔드 (별도 프로젝트로 구성 시 주석 해제)
   # backend:
