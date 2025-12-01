@@ -1,16 +1,20 @@
 # React 프론트엔드 Dockerfile
-# 멀티 스테이지 빌드를 사용하여 최종 이미지 크기 최소화
+# Vite preview 서버 사용 (테스트용)
 
-# 빌드 스테이지
-FROM node:20-alpine AS build
+FROM node:20-alpine
 
 WORKDIR /app
+
+# 빌드 시 환경변수 (Vite는 빌드 시점에 주입)
+# 같은 도메인에서 /api/로 요청하므로 슬래시만 설정
+ARG VITE_API_URL=/
+ENV VITE_API_URL=$VITE_API_URL
 
 # package.json과 package-lock.json 복사
 COPY package*.json ./
 
-# 의존성 설치
-RUN npm ci --only=production
+# 모든 의존성 설치 (devDependencies 포함)
+RUN npm ci
 
 # 소스 코드 복사
 COPY . .
@@ -18,17 +22,9 @@ COPY . .
 # 프로덕션 빌드
 RUN npm run build
 
-# 프로덕션 스테이지
-FROM nginx:alpine
-
-# Nginx 설정 파일 복사
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# 빌드된 파일을 Nginx 서빙 디렉토리로 복사
-COPY --from=build /app/dist /usr/share/nginx/html
-
 # 포트 노출
-EXPOSE 80
+EXPOSE 3000
 
-# Nginx 실행
-CMD ["nginx", "-g", "daemon off;"]
+# Vite preview 서버 실행 (포트 3000)
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "3000"]
+ 
