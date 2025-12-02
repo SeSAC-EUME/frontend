@@ -443,7 +443,10 @@ function Home() {
     const isTempRoom = roomIdStr.startsWith('temp-');
 
     if (!isPinnedRoom && !isTempRoom) {
+      // 로딩 상태 표시
+      setIsLoadingChat(true);
       await loadUserChatContents(roomId);
+      setIsLoadingChat(false);
     } else {
       // 고정 채팅방은 빈 배열로 초기화
       setMessagesByRoom((prev) =>
@@ -792,7 +795,7 @@ function Home() {
         <Header isSidebarOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
 
         <div className="chat-messages" ref={messagesContainerRef}>
-          {isLoadingChat && selectedChatId === 'ieum-talk' ? (
+          {isLoadingChat ? (
             <div className="chat-welcome">
               <div style={{ textAlign: 'center', color: '#666' }}>
                 <p>대화 내역을 불러오는 중...</p>
