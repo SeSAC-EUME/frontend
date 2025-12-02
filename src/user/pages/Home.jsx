@@ -31,13 +31,8 @@ const pinnedRooms = [
   },
 ];
 
-const defaultHistory = [
-  { id: 'h-1', title: '세상 목욕 제공', updatedAt: '방금 전' },
-  { id: 'h-2', title: 'TTS 기능 제공 여부', updatedAt: '오늘' },
-  { id: 'h-3', title: '학점은행제 자격증 인정', updatedAt: '오늘' },
-  { id: 'h-4', title: 'R 언어 개요 설명', updatedAt: '오늘' },
-  { id: 'h-5', title: '자동 sql 실행 방법', updatedAt: '오늘' },
-];
+// 초기 채팅 기록은 빈 배열 (API에서 로드)
+const defaultHistory = [];
 
 const initialMessages = {
   'ieum-talk': [
@@ -142,7 +137,10 @@ function Home() {
   const loadUserChatList = async () => {
     try {
       const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.LIST);
-      const chatList = Array.isArray(response) ? response : response.chatLists || [];
+      // API 응답 구조: { chatRooms: [...], currentPage, totalPages, ... }
+      const chatList = Array.isArray(response)
+        ? response
+        : response.chatRooms || response.chatLists || response.content || [];
 
       if (chatList.length > 0) {
         // id desc 정렬 (최신 채팅방이 위로)
@@ -154,8 +152,8 @@ function Home() {
 
         const formattedHistory = sortedList.map((chat) => ({
           id: chat.id || chat.chatListId,
-          // title이 없으면 생성일자로 표시
-          title: chat.title || formatDateTitle(chat.createdAt),
+          // roomTitle 또는 title이 없으면 생성일자로 표시
+          title: chat.roomTitle || chat.title || formatDateTitle(chat.createdAt),
           updatedAt: chat.updatedAt
             ? formatRelativeTime(chat.updatedAt)
             : '이전',
