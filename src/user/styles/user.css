@@ -6791,6 +6791,80 @@ body.dark-mode {
     background-color: #dbeafe;
 }
 
+/* 채팅 기록 목록 */
+.sidebar-chat-history {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px;
+    border-top: 1px solid #e5e7eb;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.chat-history-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    padding: 8px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.chat-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chat-history-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.15s ease;
+    width: 100%;
+}
+
+.chat-history-item:hover {
+    background-color: #f3f4f6;
+}
+
+.chat-history-item.active {
+    background-color: #e0f2fe;
+}
+
+.chat-history-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.chat-history-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+    flex: 1;
+}
+
+.chat-history-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-history-time {
+    font-size: 11px;
+    color: #9ca3af;
+}
+
 .sidebar-spacer {
     flex-grow: 1;
     pointer-events: none;

@@ -145,21 +145,43 @@ function Home() {
       const chatList = Array.isArray(response) ? response : response.chatLists || [];
 
       if (chatList.length > 0) {
-        const formattedHistory = chatList.map((chat) => ({
+        // id desc 정렬 (최신 채팅방이 위로)
+        const sortedList = [...chatList].sort((a, b) => {
+          const idA = a.id || a.chatListId || 0;
+          const idB = b.id || b.chatListId || 0;
+          return idB - idA;
+        });
+
+        const formattedHistory = sortedList.map((chat) => ({
           id: chat.id || chat.chatListId,
-          title: chat.title || '채팅',
+          // title이 없으면 생성일자로 표시
+          title: chat.title || formatDateTitle(chat.createdAt),
           updatedAt: chat.updatedAt
             ? formatRelativeTime(chat.updatedAt)
             : '이전',
         }));
         setChatHistory(formattedHistory);
+      } else {
+        setChatHistory([]);
       }
     } catch (error) {
       // 404는 채팅 목록이 없는 경우 - 정상
       if (error.response?.status !== 404) {
         console.error('채팅 목록 로드 오류:', error);
       }
+      setChatHistory([]);
     }
+  };
+
+  // 날짜를 채팅방 제목으로 포맷
+  const formatDateTitle = (dateString) => {
+    if (!dateString) return '새 채팅';
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${month}월 ${day}일 ${hours}:${minutes} 대화`;
   };
 
   // 상대 시간 포맷 (예: "방금 전", "1시간 전", "어제")

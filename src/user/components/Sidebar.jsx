@@ -141,6 +141,31 @@ function Sidebar({
         ))}
       </div>
 
+      {/* 채팅방 목록 (사이드바가 열렸을 때만 표시) */}
+      {isSidebarOpen && chatHistory && chatHistory.length > 0 && (
+        <div className="sidebar-chat-history">
+          <div className="chat-history-header">
+            <span>채팅 기록</span>
+          </div>
+          <div className="chat-history-list">
+            {chatHistory.map((chat) => (
+              <button
+                key={chat.id}
+                className={`chat-history-item ${selectedChatId === chat.id ? 'active' : ''}`}
+                onClick={() => onSelectRoom(chat.id)}
+                title={chat.title}
+              >
+                <span className="chat-history-icon">💬</span>
+                <div className="chat-history-info">
+                  <span className="chat-history-title">{chat.title}</span>
+                  <span className="chat-history-time">{chat.updatedAt}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="sidebar-spacer"></div>
 
       <div className="sidebar-profile-collapsed">
