@@ -81,7 +81,9 @@ function Home() {
   const [chatListId, setChatListId] = useState(null);
   const [isLoadingChat, setIsLoadingChat] = useState(true); // 채팅 로딩 상태
   const [isCheckingAuth, setIsCheckingAuth] = useState(true); // 인증 확인 상태
+  const [paginationByRoom, setPaginationByRoom] = useState({}); // 페이지네이션 상태 { roomId: { page, hasMore, isLoadingMore } }
   const messagesContainerRef = useRef(null);
+  const isInitialLoad = useRef(true); // 초기 로드 여부 (스크롤 위치 조정용)
 
   // 인증 확인 및 사용자 정보 초기화
   useEffect(() => {
@@ -233,10 +235,20 @@ function Home() {
   };
 
   // 채팅 내역 로드 (GET /api/eume-chats/{id}/contents)
-  const loadChatContents = async (chatId) => {
+  const loadChatContents = async (chatId, page = 0, isLoadMore = false) => {
+    const roomId = 'ieum-talk';
+
+    // 추가 로드 시 로딩 상태 설정
+    if (isLoadMore) {
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [roomId]: { ...prev[roomId], isLoadingMore: true },
+      }));
+    }
+
     try {
       const contentsResponse = await axiosInstance.get(
-        API_ENDPOINTS.EUME_CHAT.CONTENTS(chatId)
+        API_ENDPOINTS.EUME_CHAT.CONTENTS(chatId, page, 20)
       );
       console.log('채팅 내역:', contentsResponse);
 
@@ -245,9 +257,12 @@ function Home() {
         ? contentsResponse
         : contentsResponse.contents || contentsResponse.messages || [];
 
+      // 페이지네이션 정보 추출
+      const hasMore = contentsResponse.hasNext ?? contents.length >= 20;
+
       if (contents.length > 0) {
         const loadedMessages = contents.map((content, index) => ({
-          id: `loaded-${content.id || index}`,
+          id: `loaded-${content.id || index}-${page}`,
           text: content.messageContent || content.content || content.message,
           sender: content.messageType === 'USER' || content.sender === 'user' ? 'user' : 'ai',
           timestamp: content.createdAt
@@ -258,16 +273,39 @@ function Home() {
             : '',
         }));
 
-        setMessagesByRoom((prev) => ({
-          ...prev,
-          'ieum-talk': loadedMessages,
-        }));
+        // 서버에서 최신순으로 오는 경우 reverse (오래된 것이 위, 최신이 아래)
+        const orderedMessages = [...loadedMessages].reverse();
+
+        setMessagesByRoom((prev) => {
+          if (isLoadMore) {
+            // 추가 로드: 이전 메시지를 앞에 붙임
+            return {
+              ...prev,
+              [roomId]: [...orderedMessages, ...(prev[roomId] || [])],
+            };
+          }
+          // 초기 로드
+          return {
+            ...prev,
+            [roomId]: orderedMessages,
+          };
+        });
       }
+
+      // 페이지네이션 상태 업데이트
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [roomId]: { page, hasMore, isLoadingMore: false },
+      }));
     } catch (error) {
       // 404는 아직 대화 내역이 없는 경우 - 정상
       if (error.response?.status !== 404) {
         console.error('채팅 내역 로드 오류:', error);
       }
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [roomId]: { page: 0, hasMore: false, isLoadingMore: false },
+      }));
     }
   };
 
@@ -281,13 +319,54 @@ function Home() {
 
   const currentMessages = messagesByRoom[selectedChatId] || [];
   const isStreaming = !!isStreamingByRoom[selectedChatId];
+  const currentPagination = paginationByRoom[selectedChatId] || { page: 0, hasMore: false, isLoadingMore: false };
 
+  // 새 메시지 추가 시 하단으로 스크롤
   useEffect(() => {
-    if (messagesContainerRef.current) {
+    if (messagesContainerRef.current && !currentPagination.isLoadingMore) {
+      // 초기 로드 후 또는 새 메시지 추가 시 하단으로 스크롤
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
     }
-  }, [currentMessages, isStreaming, selectedChatId]);
+  }, [currentMessages.length, isStreaming, selectedChatId]);
+
+  // 무한 스크롤: 맨 위로 스크롤 시 이전 메시지 로드
+  const handleScroll = async () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // 맨 위에 도달했을 때 (약간의 여유 두어 50px 이내)
+    if (container.scrollTop < 50) {
+      const { page, hasMore, isLoadingMore } = currentPagination;
+
+      if (hasMore && !isLoadingMore) {
+        const previousScrollHeight = container.scrollHeight;
+
+        if (selectedChatId === 'ieum-talk' && chatListId) {
+          await loadChatContents(chatListId, page + 1, true);
+        } else if (!['new-chat', 'policy-info', 'ieum-talk'].includes(selectedChatId)) {
+          await loadUserChatContents(selectedChatId, page + 1, true);
+        }
+
+        // 이전 메시지 로드 후 스크롤 위치 유지 (새로 추가된 높이만큼 아래로)
+        requestAnimationFrame(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = newScrollHeight - previousScrollHeight;
+          }
+        });
+      }
+    }
+  };
+
+  // 스크롤 이벤트 리스너 등록
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [selectedChatId, currentPagination, chatListId]);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
@@ -314,14 +393,25 @@ function Home() {
   };
 
   // 일반 채팅방 내용 로드 (GET /api/user-chats/{chatListId}/contents)
-  const loadUserChatContents = async (chatId) => {
+  const loadUserChatContents = async (chatId, page = 0, isLoadMore = false) => {
+    // 추가 로드 시 로딩 상태 설정
+    if (isLoadMore) {
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [chatId]: { ...prev[chatId], isLoadingMore: true },
+      }));
+    }
+
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.CONTENTS(chatId));
+      const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.CONTENTS(chatId, page, 20));
       const contents = Array.isArray(response) ? response : response.contents || [];
+
+      // 페이지네이션 정보 추출
+      const hasMore = response.hasNext ?? contents.length >= 20;
 
       if (contents.length > 0) {
         const loadedMessages = contents.map((content, index) => ({
-          id: `loaded-${content.id || index}`,
+          id: `loaded-${content.id || index}-${page}`,
           text: content.messageContent || content.content || content.message,
           sender: content.messageType === 'USER' || content.sender === 'user' ? 'user' : 'ai',
           timestamp: content.createdAt
@@ -332,16 +422,35 @@ function Home() {
             : '',
         }));
 
-        setMessagesByRoom((prev) => ({
-          ...prev,
-          [chatId]: loadedMessages,
-        }));
-      } else {
+        // 서버에서 최신순으로 오는 경우 reverse (오래된 것이 위, 최신이 아래)
+        const orderedMessages = [...loadedMessages].reverse();
+
+        setMessagesByRoom((prev) => {
+          if (isLoadMore) {
+            // 추가 로드: 이전 메시지를 앞에 붙임
+            return {
+              ...prev,
+              [chatId]: [...orderedMessages, ...(prev[chatId] || [])],
+            };
+          }
+          // 초기 로드
+          return {
+            ...prev,
+            [chatId]: orderedMessages,
+          };
+        });
+      } else if (!isLoadMore) {
         setMessagesByRoom((prev) => ({
           ...prev,
           [chatId]: [],
         }));
       }
+
+      // 페이지네이션 상태 업데이트
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [chatId]: { page, hasMore, isLoadingMore: false },
+      }));
     } catch (error) {
       // 404는 대화 내역이 없는 경우 - 정상
       if (error.response?.status !== 404) {
@@ -350,6 +459,10 @@ function Home() {
       setMessagesByRoom((prev) => ({
         ...prev,
         [chatId]: [],
+      }));
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [chatId]: { page: 0, hasMore: false, isLoadingMore: false },
       }));
     }
   };
@@ -603,6 +716,12 @@ function Home() {
             </div>
           ) : (
             <>
+              {/* 무한 스크롤 로딩 인디케이터 */}
+              {currentPagination.isLoadingMore && (
+                <div style={{ textAlign: 'center', padding: '10px', color: '#888' }}>
+                  이전 대화 불러오는 중...
+                </div>
+              )}
               {currentMessages.map((msg) => (
                 <div key={msg.id} className={`message ${msg.sender}`}>
                   <div className="message-content">

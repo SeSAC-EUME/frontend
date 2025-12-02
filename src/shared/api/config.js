@@ -22,14 +22,16 @@ export const API_ENDPOINTS = {
   EUME_CHAT: {
     CREATE: `${JAVA_URL}api/eume-chats`,
     ME: `${JAVA_URL}api/eume-chats/me`,
-    CONTENTS: (chatListId) => `${JAVA_URL}api/eume-chats/${chatListId}/contents`,
+    CONTENTS: (chatListId, page = 0, size = 20) =>
+      `${JAVA_URL}api/eume-chats/${chatListId}/contents?page=${page}&size=${size}`,
   },
 
   // ========== 다중 채팅 API ==========
   USER_CHAT: {
     LIST: `${JAVA_URL}api/user-chats`,
     CREATE: `${JAVA_URL}api/user-chats`,
-    CONTENTS: (chatListId) => `${JAVA_URL}api/user-chats/${chatListId}/contents`,
+    CONTENTS: (chatListId, page = 0, size = 20) =>
+      `${JAVA_URL}api/user-chats/${chatListId}/contents?page=${page}&size=${size}`,
   },
 
   // ========== 관리자 API ==========
