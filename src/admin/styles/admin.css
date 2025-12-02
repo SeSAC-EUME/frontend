@@ -899,7 +899,7 @@ h3 {
     font-size: 13px;
     border: 2px solid #E5E7EB;
     border-radius: 8px;
-    padding: 0 12px;
+    padding: 0 12px !important;
     width: 100%;
     transition: all 0.3s ease;
     background: #F9FAFB;
