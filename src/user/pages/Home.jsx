@@ -577,6 +577,9 @@ function Home() {
 
     setIsStreamingByRoom((prev) => ({ ...prev, [roomId]: true }));
 
+    // 실제 메시지를 보낼 채팅방 ID (새 채팅의 경우 생성 후 변경됨)
+    let actualRoomId = roomId;
+
     try {
       // ieum-talk인 경우 Eume AI API 호출
       if (roomId === 'ieum-talk') {
@@ -645,7 +648,6 @@ function Home() {
         // 새 채팅방인 경우 먼저 생성 API 호출
         const roomIdStr = String(roomId);
         const isNewChat = roomIdStr === 'new-chat' || roomIdStr.startsWith('temp-');
-        let actualRoomId = roomId;
 
         if (isNewChat) {
           // 1. 채팅방 생성 API 호출
@@ -739,9 +741,11 @@ function Home() {
         [roomId]: [...(prev[roomId] || []), errorMessage],
       }));
     } finally {
+      // 원래 roomId와 actualRoomId 둘 다 streaming 해제
       setIsStreamingByRoom((prev) => ({
         ...prev,
         [roomId]: false,
+        [actualRoomId]: false,
       }));
     }
   };
