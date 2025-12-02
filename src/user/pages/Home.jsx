@@ -83,7 +83,7 @@ function Home() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true); // 인증 확인 상태
   const [paginationByRoom, setPaginationByRoom] = useState({}); // 페이지네이션 상태 { roomId: { page, hasMore, isLoadingMore } }
   const messagesContainerRef = useRef(null);
-  const isInitialLoad = useRef(true); // 초기 로드 여부 (스크롤 위치 조정용)
+  const shouldScrollToBottom = useRef(false); // 하단 스크롤 필요 여부 플래그
 
   // 인증 확인 및 사용자 정보 초기화
   useEffect(() => {
@@ -284,7 +284,8 @@ function Home() {
               [roomId]: [...orderedMessages, ...(prev[roomId] || [])],
             };
           }
-          // 초기 로드
+          // 초기 로드: 하단 스크롤 플래그 설정
+          shouldScrollToBottom.current = true;
           return {
             ...prev,
             [roomId]: orderedMessages,
@@ -321,14 +322,19 @@ function Home() {
   const isStreaming = !!isStreamingByRoom[selectedChatId];
   const currentPagination = paginationByRoom[selectedChatId] || { page: 0, hasMore: false, isLoadingMore: false };
 
-  // 새 메시지 추가 시 하단으로 스크롤
+  // 하단 스크롤 처리 (초기 로드 또는 새 메시지 시에만)
   useEffect(() => {
-    if (messagesContainerRef.current && !currentPagination.isLoadingMore) {
-      // 초기 로드 후 또는 새 메시지 추가 시 하단으로 스크롤
+    if (messagesContainerRef.current && shouldScrollToBottom.current) {
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
+      shouldScrollToBottom.current = false;
     }
-  }, [currentMessages.length, isStreaming, selectedChatId]);
+  }, [currentMessages.length, isStreaming]);
+
+  // 채팅방 변경 시 하단 스크롤 플래그 설정
+  useEffect(() => {
+    shouldScrollToBottom.current = true;
+  }, [selectedChatId]);
 
   // 무한 스크롤: 맨 위로 스크롤 시 이전 메시지 로드
   const handleScroll = async () => {
@@ -433,7 +439,8 @@ function Home() {
               [chatId]: [...orderedMessages, ...(prev[chatId] || [])],
             };
           }
-          // 초기 로드
+          // 초기 로드: 하단 스크롤 플래그 설정
+          shouldScrollToBottom.current = true;
           return {
             ...prev,
             [chatId]: orderedMessages,
@@ -518,6 +525,8 @@ function Home() {
       timestamp,
     };
 
+    // 새 메시지 추가: 하단 스크롤 플래그 설정
+    shouldScrollToBottom.current = true;
     setMessagesByRoom((prev) => ({
       ...prev,
       [roomId]: [...(prev[roomId] || []), userMessage],
@@ -571,6 +580,8 @@ function Home() {
           }),
         };
 
+        // AI 응답: 하단 스크롤 플래그 설정
+        shouldScrollToBottom.current = true;
         setMessagesByRoom((prev) => ({
           ...prev,
           [roomId]: [...(prev[roomId] || []), aiMessage],
@@ -588,6 +599,8 @@ function Home() {
             }),
           };
 
+          // AI 응답: 하단 스크롤 플래그 설정
+          shouldScrollToBottom.current = true;
           setMessagesByRoom((prev) => ({
             ...prev,
             [roomId]: [...(prev[roomId] || []), aiMessage],
@@ -611,6 +624,8 @@ function Home() {
           }),
         };
 
+        // AI 응답: 하단 스크롤 플래그 설정
+        shouldScrollToBottom.current = true;
         setMessagesByRoom((prev) => ({
           ...prev,
           [roomId]: [...(prev[roomId] || []), aiMessage],
@@ -638,6 +653,8 @@ function Home() {
         }),
       };
 
+      // 에러 메시지도 하단 스크롤
+      shouldScrollToBottom.current = true;
       setMessagesByRoom((prev) => ({
         ...prev,
         [roomId]: [...(prev[roomId] || []), errorMessage],
