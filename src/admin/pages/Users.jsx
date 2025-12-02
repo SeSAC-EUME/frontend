@@ -192,7 +192,31 @@ function Users() {
     try {
       const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS);
       // 백엔드 응답 구조에 따라 조정
-      setUsersData(response.users || response || []);
+      const apiUsers = response.users || response || [];
+
+      // API 응답을 프론트엔드 형식으로 매핑
+      const mappedUsers = apiUsers.map(user => ({
+        id: user.id,
+        name: user.userName || user.nickname || '이름 없음',
+        age: user.age || '-',
+        gender: user.gender || '-',
+        address: user.sigunguName || '-',
+        phone: user.phone || '-',
+        status: user.userStatus?.toLowerCase() || 'active',
+        riskLevel: user.riskLevel || 'low',
+        riskScore: user.riskScore || 0,
+        lastActive: user.lastLoginDate ? new Date(user.lastLoginDate).toLocaleString('ko-KR') : '-',
+        joinDate: user.createdAt ? new Date(user.createdAt).toLocaleDateString('ko-KR') : '-',
+        guardian: user.guardian || '-',
+        guardianPhone: user.guardianPhone || '-',
+        emotionStatus: user.emotionStatus || '-',
+        conversationCount: user.conversationCount || 0,
+        emergencyCount: user.emergencyCount || 0,
+        email: user.email || '-',
+        nickname: user.nickname || '-',
+      }));
+
+      setUsersData(mappedUsers);
     } catch (error) {
       console.error('사용자 목록 로드 오류:', error);
       // API 실패 시 샘플 데이터 사용 (개발용)
@@ -212,9 +236,9 @@ function Users() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(user =>
-        user.name.toLowerCase().includes(query) ||
-        user.address.toLowerCase().includes(query) ||
-        user.phone.includes(query)
+        (user.name || '').toLowerCase().includes(query) ||
+        (user.address || '').toLowerCase().includes(query) ||
+        (user.phone || '').includes(query)
       );
     }
 
@@ -521,7 +545,7 @@ function Users() {
                     </td>
                     <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>
                       <div className="user-info-cell">
-                        <div className="user-avatar">{user.name[0]}</div>
+                        <div className="user-avatar">{user.name?.[0] || '?'}</div>
                         <div className="user-details">
                           <span className="user-name">{user.name}</span>
                           <span className="user-id">{user.age}세 · {user.gender}</span>
