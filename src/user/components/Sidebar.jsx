@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../shared/assets/logo.svg';
 import { API_ENDPOINTS } from '../../shared/api/config';
@@ -40,9 +40,31 @@ function Sidebar({
   userInfo,
   isUserMenuOpen,
   setIsUserMenuOpen,
+  chatListPagination = { page: 0, hasMore: false, isLoading: false },
+  onLoadMoreChatList,
 }) {
   const navigate = useNavigate();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const chatHistoryListRef = useRef(null);
+
+  // 채팅 목록 무한 스크롤
+  useEffect(() => {
+    const container = chatHistoryListRef.current;
+    if (!container || !isSidebarOpen) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // 맨 아래에서 50px 이내일 때 추가 로드
+      if (scrollHeight - scrollTop - clientHeight < 50) {
+        if (chatListPagination.hasMore && !chatListPagination.isLoading && onLoadMoreChatList) {
+          onLoadMoreChatList();
+        }
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [isSidebarOpen, chatListPagination, onLoadMoreChatList]);
 
   // 로그인 여부 확인
   const isLoggedIn = () => {
@@ -147,7 +169,7 @@ function Sidebar({
           <div className="chat-history-header">
             <span>채팅 기록</span>
           </div>
-          <div className="chat-history-list">
+          <div className="chat-history-list" ref={chatHistoryListRef}>
             {chatHistory.map((chat) => (
               <button
                 key={chat.id}
@@ -162,6 +184,12 @@ function Sidebar({
                 </div>
               </button>
             ))}
+            {/* 무한 스크롤 로딩 인디케이터 */}
+            {chatListPagination.isLoading && (
+              <div style={{ textAlign: 'center', padding: '10px', color: '#888', fontSize: '12px' }}>
+                불러오는 중...
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -77,6 +77,7 @@ function Home() {
   const [isLoadingChat, setIsLoadingChat] = useState(true); // 채팅 로딩 상태
   const [isCheckingAuth, setIsCheckingAuth] = useState(true); // 인증 확인 상태
   const [paginationByRoom, setPaginationByRoom] = useState({}); // 페이지네이션 상태 { roomId: { page, hasMore, isLoadingMore } }
+  const [chatListPagination, setChatListPagination] = useState({ page: 0, hasMore: false, isLoading: false }); // 채팅 목록 페이지네이션
   const messagesContainerRef = useRef(null);
   const shouldScrollToBottom = useRef(false); // 하단 스크롤 필요 여부 플래그
 
@@ -134,13 +135,20 @@ function Home() {
   }, [navigate]);
 
   // 사용자 채팅 목록 로드 (GET /api/user-chats)
-  const loadUserChatList = async () => {
+  const loadUserChatList = async (page = 0, isLoadMore = false) => {
+    // 추가 로드 시 로딩 상태 설정
+    if (isLoadMore) {
+      setChatListPagination((prev) => ({ ...prev, isLoading: true }));
+    }
+
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.LIST);
-      // API 응답 구조: { chatRooms: [...], currentPage, totalPages, ... }
+      const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.LIST(page, 20));
+      // API 응답 구조: { chatRooms: [...], currentPage, totalPages, hasNext, ... }
       const chatList = Array.isArray(response)
         ? response
         : response.chatRooms || response.chatLists || response.content || [];
+
+      const hasMore = response.hasNext ?? false;
 
       if (chatList.length > 0) {
         // id desc 정렬 (최신 채팅방이 위로)
@@ -158,16 +166,37 @@ function Home() {
             ? formatRelativeTime(chat.updatedAt)
             : '이전',
         }));
-        setChatHistory(formattedHistory);
-      } else {
+
+        if (isLoadMore) {
+          // 추가 로드: 기존 목록 뒤에 붙임
+          setChatHistory((prev) => [...prev, ...formattedHistory]);
+        } else {
+          // 초기 로드
+          setChatHistory(formattedHistory);
+        }
+      } else if (!isLoadMore) {
         setChatHistory([]);
       }
+
+      // 페이지네이션 상태 업데이트
+      setChatListPagination({ page, hasMore, isLoading: false });
     } catch (error) {
       // 404는 채팅 목록이 없는 경우 - 정상
       if (error.response?.status !== 404) {
         console.error('채팅 목록 로드 오류:', error);
       }
-      setChatHistory([]);
+      if (!isLoadMore) {
+        setChatHistory([]);
+      }
+      setChatListPagination((prev) => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  // 채팅 목록 더 불러오기
+  const loadMoreChatList = () => {
+    const { page, hasMore, isLoading } = chatListPagination;
+    if (hasMore && !isLoading) {
+      loadUserChatList(page + 1, true);
     }
   };
 
@@ -723,6 +752,8 @@ function Home() {
         userInfo={userInfo}
         isUserMenuOpen={isUserMenuOpen}
         setIsUserMenuOpen={setIsUserMenuOpen}
+        chatListPagination={chatListPagination}
+        onLoadMoreChatList={loadMoreChatList}
       />
 
       <div className="chat-main" style={{ marginLeft: isSidebarOpen ? 320 : 60 }}>

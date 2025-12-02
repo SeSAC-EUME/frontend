@@ -6797,8 +6797,8 @@ body.dark-mode {
     flex-direction: column;
     padding: 8px 12px;
     border-top: 1px solid #e5e7eb;
-    max-height: 300px;
-    overflow-y: auto;
+    max-height: 600px;
+    overflow: hidden;
 }
 
 .chat-history-header {
@@ -6808,12 +6808,15 @@ body.dark-mode {
     padding: 8px 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    flex-shrink: 0;
 }
 
 .chat-history-list {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .chat-history-item {

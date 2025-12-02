@@ -28,7 +28,8 @@ export const API_ENDPOINTS = {
 
   // ========== 다중 채팅 API ==========
   USER_CHAT: {
-    LIST: `${JAVA_URL}api/user-chats`,
+    LIST: (page = 0, size = 20) =>
+      `${JAVA_URL}api/user-chats?page=${page}&size=${size}`,
     CREATE: `${JAVA_URL}api/user-chats`,
     CONTENTS: (chatListId, page = 0, size = 20) =>
       `${JAVA_URL}api/user-chats/${chatListId}/contents?page=${page}&size=${size}`,
