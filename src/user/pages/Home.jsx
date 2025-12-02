@@ -528,31 +528,12 @@ function Home() {
     }
   };
 
-  const handleStartNewChat = async () => {
-    try {
-      // POST /api/user-chats - 새 채팅방 생성
-      const response = await axiosInstance.post(API_ENDPOINTS.USER_CHAT.CREATE);
-      const newChatId = response.id || response.chatListId;
-
-      if (newChatId) {
-        const newEntry = {
-          id: newChatId,
-          title: response.title || '새 채팅',
-          updatedAt: '방금 전',
-        };
-        setChatHistory((prev) => [newEntry, ...prev]);
-        setMessagesByRoom((prev) => ({ ...prev, [newChatId]: [] }));
-        handleSelectRoom(newChatId);
-      }
-    } catch (error) {
-      console.error('새 채팅 생성 오류:', error);
-      // 백엔드 오류 시 로컬 임시 채팅방 생성
-      const tempId = `temp-${Date.now()}`;
-      const newEntry = { id: tempId, title: '새 채팅', updatedAt: '방금 전' };
-      setChatHistory((prev) => [newEntry, ...prev]);
-      setMessagesByRoom((prev) => ({ ...prev, [tempId]: [] }));
-      handleSelectRoom(tempId);
-    }
+  const handleStartNewChat = () => {
+    // API 호출 없이 임시 채팅방으로 전환
+    // 실제 채팅방은 첫 메시지 전송 시 생성됨
+    setSelectedChatId('new-chat');
+    setMessagesByRoom((prev) => ({ ...prev, 'new-chat': [] }));
+    setPrompt('');
   };
 
   const handleActionClick = (id) => {
@@ -661,9 +642,46 @@ function Home() {
           }));
         }, 600);
       } else {
-        // 일반 채팅방은 USER_CHAT API 호출
+        // 새 채팅방인 경우 먼저 생성 API 호출
+        const roomIdStr = String(roomId);
+        const isNewChat = roomIdStr === 'new-chat' || roomIdStr.startsWith('temp-');
+        let actualRoomId = roomId;
+
+        if (isNewChat) {
+          // 1. 채팅방 생성 API 호출
+          const createResponse = await axiosInstance.post(API_ENDPOINTS.USER_CHAT.CREATE);
+          const newChatId = createResponse.id || createResponse.chatListId;
+
+          if (newChatId) {
+            actualRoomId = newChatId;
+
+            // 채팅 목록에 새 채팅방 추가
+            const newEntry = {
+              id: newChatId,
+              title: createResponse.roomTitle || formatDateTitle(new Date().toISOString()),
+              updatedAt: '방금 전',
+            };
+            setChatHistory((prev) => [newEntry, ...prev]);
+
+            // 기존 메시지를 새 채팅방으로 이동
+            setMessagesByRoom((prev) => {
+              const currentMessages = prev[roomId] || [];
+              const newState = { ...prev, [newChatId]: currentMessages };
+              // 임시 채팅방 메시지 삭제
+              if (roomIdStr === 'new-chat') {
+                newState['new-chat'] = [];
+              }
+              return newState;
+            });
+
+            // 선택된 채팅방 ID 변경
+            setSelectedChatId(newChatId);
+          }
+        }
+
+        // 2. 메시지 전송 API 호출
         const response = await axiosInstance.post(
-          API_ENDPOINTS.USER_CHAT.CONTENTS(roomId),
+          API_ENDPOINTS.USER_CHAT.CONTENTS(actualRoomId),
           { messageContent: messageText }
         );
 
@@ -682,7 +700,7 @@ function Home() {
         shouldScrollToBottom.current = true;
         setMessagesByRoom((prev) => ({
           ...prev,
-          [roomId]: [...(prev[roomId] || []), aiMessage],
+          [actualRoomId]: [...(prev[actualRoomId] || []), aiMessage],
         }));
       }
     } catch (error) {
