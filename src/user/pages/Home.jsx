@@ -346,6 +346,8 @@ function Home() {
       const { page, hasMore, isLoadingMore } = currentPagination;
 
       if (hasMore && !isLoadingMore) {
+        // 무한 스크롤 시 하단 스크롤 방지
+        shouldScrollToBottom.current = false;
         const previousScrollHeight = container.scrollHeight;
 
         if (selectedChatId === 'ieum-talk' && chatListId) {
