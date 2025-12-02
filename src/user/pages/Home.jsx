@@ -676,6 +676,13 @@ function Home() {
 
             // 선택된 채팅방 ID 변경
             setSelectedChatId(newChatId);
+
+            // streaming 상태도 새 채팅방으로 이동
+            setIsStreamingByRoom((prev) => ({
+              ...prev,
+              [newChatId]: true,
+              [roomId]: false,
+            }));
           }
         }
 
@@ -800,8 +807,14 @@ function Home() {
                   onKeyPress={handleKeyPress}
                 />
                 <div className="prompt-actions">
-                  <button className="prompt-action" aria-label="음성 입력">🎙️</button>
-                  <button className="prompt-action" aria-label="업로드">⬆️</button>
+                  <button
+                    className="send-btn"
+                    onClick={handleSendMessage}
+                    disabled={!prompt.trim()}
+                    aria-label="전송"
+                  >
+                    ➤
+                  </button>
                 </div>
               </div>
             </div>
