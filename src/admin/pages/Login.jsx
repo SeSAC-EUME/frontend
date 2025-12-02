@@ -121,6 +121,11 @@ function Login() {
       if (response.status === 200) {
         const result = response.data;
 
+        // 기관 이름 가져오기: 기관 목록에서 찾기
+        const sigunguIdNum = parseInt(formData.sigunguId, 10);
+        const selectedOrg = orgs.find(org => Number(org.id) === sigunguIdNum);
+        const sigunguName = selectedOrg ? selectedOrg.name : '';
+
         // 사용자 정보 저장 (토큰은 쿠키로 자동 설정됨)
         const userData = {
           id: result.id,
@@ -128,6 +133,7 @@ function Login() {
           adminEmail: result.adminEmail,
           lastLoginDate: result.lastLoginDate,
           sigunguId: formData.sigunguId,
+          sigunguName: sigunguName,
         };
 
         // 세션 저장
@@ -446,12 +452,14 @@ function Login() {
               }}
               onClick={() => {
                 // 개발용 더미 데이터 저장
+                const firstOrg = orgs.length > 0 ? orgs[0] : null;
                 const devUserData = {
                   id: 1,
                   adminName: '개발자',
                   adminEmail: 'dev@admin.com',
                   lastLoginDate: new Date().toISOString(),
-                  sigunguId: 1,
+                  sigunguId: firstOrg ? firstOrg.id : 1,
+                  sigunguName: firstOrg ? firstOrg.name : '개발 기관',
                 };
                 localStorage.setItem(
                   STORAGE_KEYS.ADMIN_USER,

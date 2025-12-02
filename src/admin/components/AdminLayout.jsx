@@ -94,8 +94,8 @@ function AdminLayout({ children }) {
               <img src={userIcon} alt="사용자" style={{ width: '16px', height: '16px', stroke: '#667EEA' }} />
             </div>
             <div className="user-details">
-              <span className="user-name">{currentUser.name || '홍길동'}</span>
-              <span className="user-role">{currentUser.role || '서울시청 복지과'}</span>
+              <span className="user-name">{currentUser.adminName || '관리자'}</span>
+              <span className="user-role">{currentUser.sigunguName || '소속 기관'}</span>
             </div>
             <button className="dropdown-toggle">
               <img src={chevronDownIcon} alt="더보기" style={{ width: '12px', height: '12px' }} />
