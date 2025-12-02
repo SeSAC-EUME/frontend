@@ -46,8 +46,10 @@ export const API_ENDPOINTS = {
     USER_STATUS: (userId) => `${JAVA_URL}api/admin/users/${userId}/status`,
     USER_EMOTIONS: (userId) => `${JAVA_URL}api/admin/users/${userId}/emotions`,
     USERS_EXPORT: `${JAVA_URL}api/admin/users/export`,
-    REPORTS_SUMMARY: `${JAVA_URL}api/admin/reports/summary`,
-    REPORTS_EXPORT: `${JAVA_URL}api/admin/reports/export`,
+    REPORTS_SUMMARY: (fromDate, toDate) =>
+      `${JAVA_URL}api/admin/reports/summary?fromDate=${fromDate}&toDate=${toDate}`,
+    REPORTS_EXPORT: (fromDate, toDate) =>
+      `${JAVA_URL}api/admin/reports/export?fromDate=${fromDate}&toDate=${toDate}`,
   },
 };
 

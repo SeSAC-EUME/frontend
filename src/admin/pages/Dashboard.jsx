@@ -18,10 +18,29 @@ import chartBarIcon from '../assets/icons/chart-bar.svg';
 
 // 기본 통계 데이터 (API 폴백용)
 const defaultStats = {
-  totalUsers: 1234,
-  activeUsers: 892,
-  emergencyAlerts: 3,
-  avgSatisfaction: 4.5,
+  totalUsers: 0,
+  activeUsers: 0,
+  emergencyAlerts: 0,
+  avgSatisfaction: 0,
+};
+
+// 날짜를 YYYY-MM-DD 형식으로 포맷
+const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// 기본 날짜 범위 (최근 30일)
+const getDefaultDateRange = () => {
+  const toDate = new Date();
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - 30);
+  return {
+    fromDate: formatDate(fromDate),
+    toDate: formatDate(toDate),
+  };
 };
 
 function Dashboard() {
@@ -29,21 +48,27 @@ function Dashboard() {
   const [stats, setStats] = useState(defaultStats);
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [dateRange, setDateRange] = useState(getDefaultDateRange);
 
   // 대시보드 데이터 로드
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [dateRange]);
 
   const loadDashboardData = async () => {
     setIsLoading(true);
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.REPORTS_SUMMARY);
+      const response = await axiosInstance.get(
+        API_ENDPOINTS.ADMIN.REPORTS_SUMMARY(dateRange.fromDate, dateRange.toDate)
+      );
+      // API 응답 구조에 맞게 데이터 추출
+      const userActivity = response.userActivity || {};
+      const emotion = response.emotion || {};
       setStats({
-        totalUsers: response.totalUsers || defaultStats.totalUsers,
-        activeUsers: response.activeUsers || defaultStats.activeUsers,
-        emergencyAlerts: response.emergencyAlerts || defaultStats.emergencyAlerts,
-        avgSatisfaction: response.avgSatisfaction || defaultStats.avgSatisfaction,
+        totalUsers: userActivity.totalUsers || defaultStats.totalUsers,
+        activeUsers: userActivity.activeUsers || defaultStats.activeUsers,
+        emergencyAlerts: emotion.needAttentionUsers || defaultStats.emergencyAlerts,
+        avgSatisfaction: emotion.avgEmotionScore || defaultStats.avgSatisfaction,
       });
     } catch (error) {
       console.error('대시보드 데이터 로드 오류:', error);
@@ -56,7 +81,9 @@ function Dashboard() {
   const downloadReport = async () => {
     setIsDownloading(true);
     try {
-      const response = await axiosBlob.get(API_ENDPOINTS.ADMIN.REPORTS_EXPORT);
+      const response = await axiosBlob.get(
+        API_ENDPOINTS.ADMIN.REPORTS_EXPORT(dateRange.fromDate, dateRange.toDate)
+      );
 
       // Content-Disposition에서 파일명 추출 또는 기본값 사용
       const contentDisposition = response.headers['content-disposition'];
