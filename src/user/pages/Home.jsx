@@ -438,8 +438,11 @@ function Home() {
     }
 
     // 고정 채팅방이 아닌 경우 (일반 채팅방) 과거 대화 로드
-    const isPinnedRoom = ['new-chat', 'policy-info', 'ieum-talk'].includes(roomId);
-    if (!isPinnedRoom && !roomId.startsWith('temp-')) {
+    const roomIdStr = String(roomId);
+    const isPinnedRoom = ['new-chat', 'policy-info', 'ieum-talk'].includes(roomIdStr);
+    const isTempRoom = roomIdStr.startsWith('temp-');
+
+    if (!isPinnedRoom && !isTempRoom) {
       await loadUserChatContents(roomId);
     } else {
       // 고정 채팅방은 빈 배열로 초기화
