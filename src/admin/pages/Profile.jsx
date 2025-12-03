@@ -18,13 +18,9 @@ function Profile() {
 
   const [activeTab, setActiveTab] = useState('profile');
   const [profileData, setProfileData] = useState({
-    name: currentUser.name || '개발자',
-    loginId: currentUser.loginId || 'admin',
-    email: currentUser.email || 'dev@admin.com',
-    phone: '010-1234-5678',
-    department: '서울시청 복지과',
-    position: '주무관',
-    joinDate: '2024-01-15'
+    name: currentUser.adminName || '',
+    email: currentUser.adminEmail || '',
+    department: currentUser.sigunguName || ''
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -69,8 +65,8 @@ function Profile() {
     // 프로필 저장 로직
     const updatedUser = {
       ...currentUser,
-      name: profileData.name,
-      email: profileData.email
+      adminName: profileData.name,
+      adminEmail: profileData.email
     };
     localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(updatedUser));
     alert('프로필이 저장되었습니다.');
@@ -121,8 +117,8 @@ function Profile() {
             <div className="profile-avatar-large">
               <img src={userIcon} alt="프로필" style={{ width: '48px', height: '48px' }} />
             </div>
-            <div className="profile-name">{profileData.name}</div>
-            <div className="profile-role">{profileData.department}</div>
+            <div className="profile-name">{profileData.name || '관리자'}</div>
+            <div className="profile-role">{profileData.department || '소속 기관'}</div>
           </div>
 
           <div className="profile-menu">
@@ -160,7 +156,7 @@ function Profile() {
               </div>
 
               <div className="profile-form">
-                <div className="form-grid-3col">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
                   <div className="form-group">
                     <label>이름</label>
                     <input
@@ -169,27 +165,6 @@ function Profile() {
                       value={profileData.name}
                       onChange={handleProfileChange}
                       className="form-input"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>아이디</label>
-                    <input
-                      type="text"
-                      name="loginId"
-                      value={profileData.loginId}
-                      disabled
-                      className="form-input"
-                      style={{ background: '#F1F5F9', cursor: 'not-allowed' }}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>가입일</label>
-                    <input
-                      type="text"
-                      value={profileData.joinDate}
-                      disabled
-                      className="form-input"
-                      style={{ background: '#F1F5F9', cursor: 'not-allowed' }}
                     />
                   </div>
                   <div className="form-group">
@@ -202,34 +177,15 @@ function Profile() {
                       className="form-input"
                     />
                   </div>
-                  <div className="form-group">
-                    <label>전화번호</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={profileData.phone}
-                      onChange={handleProfileChange}
-                      className="form-input"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>직급</label>
-                    <input
-                      type="text"
-                      name="position"
-                      value={profileData.position}
-                      onChange={handleProfileChange}
-                      className="form-input"
-                    />
-                  </div>
-                  <div className="form-group" style={{ gridColumn: 'span 3' }}>
-                    <label>소속 부서</label>
+                  <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                    <label>소속 기관</label>
                     <input
                       type="text"
                       name="department"
                       value={profileData.department}
-                      onChange={handleProfileChange}
+                      disabled
                       className="form-input"
+                      style={{ background: '#F1F5F9', cursor: 'not-allowed' }}
                     />
                   </div>
                 </div>

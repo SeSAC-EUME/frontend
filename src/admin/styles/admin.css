@@ -5485,6 +5485,7 @@ h3 {
 .profile-sidebar {
     width: 280px;
     flex-shrink: 0;
+    margin-bottom: 14px;
 }
 
 .profile-avatar-section {

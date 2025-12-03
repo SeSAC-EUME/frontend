@@ -15,7 +15,6 @@ import chartBarIcon from '../assets/icons/chart-bar.svg';
 import usersIcon from '../assets/icons/users.svg';
 import heartIcon from '../assets/icons/heart.svg';
 import messageCircleIcon from '../assets/icons/message-circle.svg';
-import triangleAlertIcon from '../assets/icons/triangle-alert.svg';
 import fileTextIcon from '../assets/icons/file-text.svg';
 import settingsIcon from '../assets/icons/settings.svg';
 import infoIcon from '../assets/icons/info.svg';
@@ -143,12 +142,6 @@ function AdminLayout({ children }) {
             <a href="/admin/conversation" onClick={(e) => { e.preventDefault(); navigate('/admin/conversation'); }}>
               <img src={messageCircleIcon} alt="대화 분석" className="menu-icon" />
               <span>대화 분석</span>
-            </a>
-          </li>
-          <li className={`menu-item ${isActive('/admin/emergency') ? 'active' : ''}`}>
-            <a href="/admin/emergency" onClick={(e) => { e.preventDefault(); navigate('/admin/emergency'); }}>
-              <img src={triangleAlertIcon} alt="정서 위험 감지 기록" className="menu-icon" />
-              <span>정서 위험 감지 기록</span>
             </a>
           </li>
           <li className={`menu-item ${isActive('/admin/reports') ? 'active' : ''}`}>

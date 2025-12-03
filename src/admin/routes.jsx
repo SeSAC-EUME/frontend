@@ -12,7 +12,6 @@ import AdminEmotionMonitor from './pages/EmotionMonitor';
 import AdminConversation from './pages/Conversation';
 import AdminReports from './pages/Reports';
 import AdminProfile from './pages/Profile';
-import AdminEmergency from './pages/Emergency';
 
 const adminRoutes = [
   {
@@ -49,10 +48,6 @@ const adminRoutes = [
       {
         path: 'profile',
         element: <AdminProfile />,
-      },
-      {
-        path: 'emergency',
-        element: <AdminEmergency />,
       },
     ],
   },
