@@ -791,10 +791,10 @@ function Home() {
         onLoadMoreChatList={loadMoreChatList}
       />
 
-      <div className="chat-main" style={{ marginLeft: isSidebarOpen ? 320 : 60 }}>
+      <div className="chat-main" style={{ marginLeft: isSidebarOpen ? 320 : 60 }} ref={messagesContainerRef}>
         <Header isSidebarOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
 
-        <div className="chat-messages" ref={messagesContainerRef}>
+        <div className="chat-messages">
           {isLoadingChat ? (
             <div className="chat-welcome">
               <div style={{ textAlign: 'center', color: '#666' }}>
