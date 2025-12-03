@@ -4,7 +4,7 @@ import AdminLayout from '../components/AdminLayout';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
 import axiosBlob, { downloadBlob, extractFilename } from '../../shared/api/axiosBlob';
-import { toKoreanTime } from '../../shared/utils/dateUtils';
+import { toKoreanTime, formatKoreanDateTime, formatKoreanDate } from '../../shared/utils/dateUtils';
 import '../styles/admin.css';
 import '../styles/admin-responsive.css';
 
@@ -51,6 +51,15 @@ function EmotionMonitor() {
   const [selectedUserEmotion, setSelectedUserEmotion] = useState(null);
   const [showEmotionDetailModal, setShowEmotionDetailModal] = useState(false);
   const [userEmotionHistory, setUserEmotionHistory] = useState([]);
+
+  // 사용자 상세 모달 상태
+  const [showUserDetailModal, setShowUserDetailModal] = useState(false);
+  const [selectedUserDetail, setSelectedUserDetail] = useState(null);
+  const [isLoadingUserDetail, setIsLoadingUserDetail] = useState(false);
+  const [userDetailEmotionHistory, setUserDetailEmotionHistory] = useState([]);
+  const [isLoadingUserDetailEmotions, setIsLoadingUserDetailEmotions] = useState(false);
+  const [userDetailEmotionPage, setUserDetailEmotionPage] = useState(1);
+  const [userDetailEmotionPageSize, setUserDetailEmotionPageSize] = useState(5);
 
   // 데이터 로드
   useEffect(() => {
@@ -296,8 +305,105 @@ function EmotionMonitor() {
     loadEmotionData();
   };
 
-  const viewUserDetail = (userId) => {
-    navigate(`/admin/users?id=${userId}`);
+  // 나이 계산 함수
+  const calculateUserAge = (birthDate) => {
+    if (!birthDate) return '-';
+    const birth = new Date(birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  // 감정 점수에 따른 레벨 (스타일용)
+  const getEmotionLevelFromScoreForStyle = (score) => {
+    if (score === null || score === undefined) return 'normal';
+    if (score >= 60) return 'danger';
+    if (score >= 30) return 'warning';
+    return 'good';
+  };
+
+  // 사용자 상세 보기 (모달)
+  const viewUserDetail = async (userId) => {
+    setIsLoadingUserDetail(true);
+    setIsLoadingUserDetailEmotions(true);
+    setShowUserDetailModal(true);
+    setUserDetailEmotionPage(1);
+
+    try {
+      const userDetail = await axiosInstance.get(API_ENDPOINTS.ADMIN.USER_DETAIL(userId));
+
+      // 주소 조합
+      const fullAddress = [userDetail.sigungu?.sido, userDetail.sigungu?.sigungu]
+        .filter(Boolean)
+        .join(' ') || '-';
+
+      const mappedDetail = {
+        id: userDetail.id,
+        name: userDetail.userName || userDetail.nickname || '이름 없음',
+        age: calculateUserAge(userDetail.birthDate),
+        birthDate: userDetail.birthDate ? formatKoreanDate(userDetail.birthDate) : '-',
+        gender: userDetail.gender || '-',
+        address: fullAddress,
+        phone: userDetail.phone || '-',
+        status: userDetail.userStatus?.toLowerCase() || 'active',
+        riskLevel: userDetail.riskLevel || 'low',
+        riskScore: userDetail.riskScore || 0,
+        lastActive: formatKoreanDateTime(userDetail.lastLoginDate),
+        joinDate: formatKoreanDate(userDetail.createdAt),
+        emotionStatus: userDetail.emotionStatus || '-',
+        conversationCount: userDetail.conversationCount || 0,
+        emergencyCount: userDetail.emergencyCount || 0,
+        email: userDetail.email || '-',
+        nickname: userDetail.nickname || '-',
+        profileImage: userDetail.profileImage || '',
+      };
+
+      setSelectedUserDetail(mappedDetail);
+    } catch (error) {
+      console.error('사용자 상세 조회 오류:', error);
+      alert('사용자 정보를 불러올 수 없습니다.');
+      closeUserDetailModal();
+    } finally {
+      setIsLoadingUserDetail(false);
+    }
+
+    // 감정 이력 조회
+    try {
+      const emotionResponse = await axiosInstance.get(
+        `${API_ENDPOINTS.ADMIN.USER_EMOTIONS(userId)}?size=50`
+      );
+      setUserDetailEmotionHistory(emotionResponse.emotions || []);
+    } catch (error) {
+      console.error('감정 이력 조회 오류:', error);
+      setUserDetailEmotionHistory([]);
+    } finally {
+      setIsLoadingUserDetailEmotions(false);
+    }
+  };
+
+  // 사용자 상세 모달 닫기
+  const closeUserDetailModal = () => {
+    setShowUserDetailModal(false);
+    setSelectedUserDetail(null);
+    setUserDetailEmotionHistory([]);
+    setUserDetailEmotionPage(1);
+    setUserDetailEmotionPageSize(5);
+  };
+
+  // 상태 텍스트
+  const getStatusText = (status) => {
+    const statusMap = { 'active': '활성', 'inactive': '비활성', 'warning': '주의' };
+    return statusMap[status] || status;
+  };
+
+  // 위험도 텍스트
+  const getRiskText = (level) => {
+    const riskMap = { 'low': '낮음', 'medium': '보통', 'high': '높음' };
+    return riskMap[level] || level;
   };
 
   // 감정 상세 보기
@@ -429,24 +535,124 @@ function EmotionMonitor() {
           <h3>감정 분포</h3>
           <span className="card-subtitle">전체 이용자의 현재 감정 상태</span>
         </div>
-        <div className="emotion-distribution">
-          {emotionDistribution.map((item, index) => (
-            <div key={index} className="emotion-item">
-              <div className="emotion-info">
-                <span className="emotion-label">{item.emotion}</span>
-                <span className="emotion-count">{item.count}명 ({item.percentage}%)</span>
+        <div style={{ display: 'flex', gap: '40px', alignItems: 'center', padding: '20px' }}>
+          {/* 도넛 차트 */}
+          <div style={{ position: 'relative', width: '200px', height: '200px', flexShrink: 0 }}>
+            <div
+              style={{
+                width: '200px',
+                height: '200px',
+                borderRadius: '50%',
+                background: (() => {
+                  const total = emotionDistribution.reduce((sum, item) => sum + item.count, 0);
+                  if (total === 0) return '#E2E8F0';
+
+                  let cumulative = 0;
+                  const segments = emotionDistribution.map(item => {
+                    const start = cumulative;
+                    cumulative += (item.count / total) * 100;
+                    return `${item.color} ${start}% ${cumulative}%`;
+                  });
+                  return `conic-gradient(${segments.join(', ')})`;
+                })(),
+              }}
+            />
+            {/* 도넛 중앙 원 */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '120px',
+                height: '120px',
+                borderRadius: '50%',
+                background: 'white',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: 'inset 0 0 10px rgba(0,0,0,0.05)'
+              }}
+            >
+              <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#1E293B' }}>
+                {emotionStats.총이용자}
               </div>
-              <div className="emotion-bar-container">
+              <div style={{ fontSize: '12px', color: '#64748B' }}>전체 이용자</div>
+            </div>
+          </div>
+
+          {/* 범례 및 상세 정보 */}
+          <div style={{ flex: 1 }}>
+            {emotionDistribution.map((item, index) => (
+              <div
+                key={index}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  marginBottom: '8px',
+                  background: '#F8FAFC',
+                  borderRadius: '8px',
+                  borderLeft: `4px solid ${item.color}`
+                }}
+              >
+                {/* 컬러 인디케이터 */}
                 <div
-                  className="emotion-bar"
                   style={{
-                    width: `${item.percentage}%`,
-                    backgroundColor: item.color
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    background: item.color,
+                    marginRight: '12px',
+                    flexShrink: 0
                   }}
                 />
+                {/* 감정 라벨 */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: '600', fontSize: '14px', color: '#1E293B' }}>
+                    {item.emotion}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748B' }}>
+                    {item.emotion === '안전' && '0~29점'}
+                    {item.emotion === '주의' && '30~59점'}
+                    {item.emotion === '고위험' && '60~79점'}
+                    {item.emotion === '매우 심각' && '80~100점'}
+                  </div>
+                </div>
+                {/* 인원수 및 퍼센트 */}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '18px', color: item.color }}>
+                    {item.count}명
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748B' }}>
+                    {item.percentage}%
+                  </div>
+                </div>
+                {/* 미니 프로그레스 바 */}
+                <div
+                  style={{
+                    width: '60px',
+                    height: '6px',
+                    background: '#E2E8F0',
+                    borderRadius: '3px',
+                    marginLeft: '16px',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${item.percentage}%`,
+                      height: '100%',
+                      background: item.color,
+                      borderRadius: '3px',
+                      transition: 'width 0.3s ease'
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
@@ -586,7 +792,7 @@ function EmotionMonitor() {
         <div className="modal-overlay" style={{ display: 'flex' }} onClick={closeEmotionDetailModal}>
           <div
             className="modal-container"
-            style={{ maxWidth: '700px', maxHeight: '80vh', overflow: 'auto' }}
+            style={{ maxWidth: '950px', maxHeight: '85vh', overflow: 'auto' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
@@ -667,51 +873,51 @@ function EmotionMonitor() {
               <h4 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>감정 분석 이력</h4>
               {userEmotionHistory.length > 0 ? (
                 <div className="table-responsive">
-                  <table className="users-table" style={{ fontSize: '13px' }}>
+                  <table className="users-table" style={{ fontSize: '13px', tableLayout: 'fixed', width: '100%' }}>
                     <thead>
                       <tr>
-                        <th>분석 일시</th>
-                        <th>감정 점수</th>
-                        <th>우울</th>
-                        <th>불안</th>
-                        <th>스트레스</th>
-                        <th>키워드</th>
+                        <th style={{ width: '120px' }}>분석 일시</th>
+                        <th style={{ width: '70px', textAlign: 'center' }}>감정 점수</th>
+                        <th style={{ width: '70px', textAlign: 'center' }}>우울</th>
+                        <th style={{ width: '70px', textAlign: 'center' }}>불안</th>
+                        <th style={{ width: '70px', textAlign: 'center' }}>스트레스</th>
+                        <th>분석 내용</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {userEmotionHistory.map((emotion, idx) => (
-                        <tr key={emotion.id || idx}>
-                          <td>{formatDateTime(emotion.analysisDate)}</td>
-                          <td>
-                            <span style={{
-                              fontWeight: '500',
-                              color: emotion.emotionScore >= 60 ? '#10B981' : emotion.emotionScore >= 40 ? '#F59E0B' : '#EF4444'
-                            }}>
-                              {emotion.emotionScore}
-                            </span>
-                          </td>
-                          <td>{emotion.depressionScore}</td>
-                          <td>{emotion.anxietyScore}</td>
-                          <td>{emotion.stressScore}</td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                              {(emotion.keywords || []).slice(0, 3).map((kw, i) => (
-                                <span
-                                  key={i}
-                                  style={{
-                                    padding: '2px 6px',
-                                    background: '#F1F5F9',
-                                    borderRadius: '4px',
-                                    fontSize: '11px'
-                                  }}
-                                >
-                                  {kw}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {userEmotionHistory.map((emotion, idx) => {
+                        // 분석일을 날짜와 시간 두 줄로 표시
+                        const analysisDate = emotion.analysisDate ? toKoreanTime(emotion.analysisDate) : null;
+                        const dateLine = analysisDate ? analysisDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' }) : '-';
+                        const timeLine = analysisDate ? analysisDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+                        return (
+                          <tr key={emotion.id || idx}>
+                            <td style={{ verticalAlign: 'middle' }}>
+                              <div style={{ lineHeight: '1.4' }}>
+                                <div>{dateLine}</div>
+                                <div style={{ color: '#64748B', fontSize: '12px' }}>{timeLine}</div>
+                              </div>
+                            </td>
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                              <span style={{
+                                fontWeight: '500',
+                                color: emotion.emotionScore >= 60 ? '#EF4444' : emotion.emotionScore >= 30 ? '#F59E0B' : '#10B981'
+                              }}>
+                                {emotion.emotionScore}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{emotion.depressionScore}</td>
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{emotion.anxietyScore}</td>
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>{emotion.stressScore}</td>
+                            <td style={{ verticalAlign: 'middle' }}>
+                              <div style={{ fontSize: '12px', color: '#475569', lineHeight: '1.5' }}>
+                                {emotion.keywords || '-'}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -724,9 +930,343 @@ function EmotionMonitor() {
 
             <div className="modal-footer">
               <button className="btn-secondary" onClick={closeEmotionDetailModal}>닫기</button>
-              <button className="btn-primary" onClick={() => viewUserDetail(selectedUserEmotion.id)}>
+              <button className="btn-primary" onClick={() => { closeEmotionDetailModal(); viewUserDetail(selectedUserEmotion.id); }}>
                 사용자 상세 보기
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 사용자 상세 정보 모달 */}
+      {showUserDetailModal && (
+        <div className="modal-overlay" style={{ display: 'flex' }} onClick={(e) => { if (e.target.className === 'modal-overlay') closeUserDetailModal(); }}>
+          <div className="modal-container" style={{ maxWidth: '1200px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {!isLoadingUserDetail && selectedUserDetail && (
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: 'var(--admin-primary-light)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    flexShrink: 0
+                  }}>
+                    {selectedUserDetail.profileImage ? (
+                      <img
+                        src={selectedUserDetail.profileImage}
+                        alt={selectedUserDetail.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <span style={{
+                      display: selectedUserDetail.profileImage ? 'none' : 'flex',
+                      fontSize: '20px',
+                      fontWeight: '600',
+                      color: 'var(--admin-primary)'
+                    }}>
+                      {selectedUserDetail.name?.[0] || '?'}
+                    </span>
+                  </div>
+                )}
+                <h3 className="modal-title">
+                  {isLoadingUserDetail ? '정보 불러오는 중...' : `${selectedUserDetail?.name || ''} 님의 상세 정보`}
+                </h3>
+              </div>
+              <button className="modal-close" onClick={closeUserDetailModal}>×</button>
+            </div>
+            <div className="modal-body">
+              {isLoadingUserDetail ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--admin-text-light)' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '12px' }}>⏳</div>
+                  <div>사용자 정보를 불러오는 중...</div>
+                </div>
+              ) : !selectedUserDetail ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--admin-text-light)' }}>
+                  <div style={{ fontSize: '24px', marginBottom: '12px' }}>❌</div>
+                  <div>사용자 정보를 불러올 수 없습니다</div>
+                </div>
+              ) : (
+                <>
+                  {/* 기본 정보 */}
+                  <div style={{ background: 'var(--admin-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--admin-text-dark)' }}>기본 정보</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>이름</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.name}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>생년월일</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.birthDate}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>나이</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.age !== '-' ? `${selectedUserDetail.age}세` : '-'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>성별</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.gender}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>전화번호</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.phone}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>주소</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.address}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 활동 정보 */}
+                  <div style={{ background: 'var(--admin-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--admin-text-dark)' }}>활동 정보</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>가입일</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.joinDate}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>최근 활동</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.lastActive}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>대화 건수</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.conversationCount}건</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>긴급 요청</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.emergencyCount}건</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 감정 이력 */}
+                  <div style={{ background: 'var(--admin-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <h4 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--admin-text-dark)', margin: 0 }}>감정 분석 이력</h4>
+                      {userDetailEmotionHistory.length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '13px', color: 'var(--admin-text-light)' }}>표시 개수:</span>
+                          <select
+                            value={userDetailEmotionPageSize}
+                            onChange={(e) => {
+                              setUserDetailEmotionPageSize(Number(e.target.value));
+                              setUserDetailEmotionPage(1);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              border: '1px solid var(--admin-border)',
+                              fontSize: '13px',
+                              background: 'white',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value={5}>5개</option>
+                            <option value={10}>10개</option>
+                            <option value={20}>20개</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                    {isLoadingUserDetailEmotions ? (
+                      <div style={{ textAlign: 'center', padding: '20px', color: 'var(--admin-text-light)' }}>
+                        감정 이력을 불러오는 중...
+                      </div>
+                    ) : userDetailEmotionHistory.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '20px', color: 'var(--admin-text-light)' }}>
+                        감정 분석 이력이 없습니다
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid var(--admin-border)' }}>
+                              <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', color: 'var(--admin-text-light)', width: '130px' }}>분석일</th>
+                              <th style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', color: 'var(--admin-text-light)', width: '70px' }}>감정 상태</th>
+                              <th style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', color: 'var(--admin-text-light)', width: '70px' }}>감정 점수</th>
+                              <th style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', color: 'var(--admin-text-light)', width: '70px' }}>우울</th>
+                              <th style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', color: 'var(--admin-text-light)', width: '70px' }}>불안</th>
+                              <th style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', color: 'var(--admin-text-light)', width: '70px' }}>스트레스</th>
+                              <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', color: 'var(--admin-text-light)' }}>분석 내용</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {userDetailEmotionHistory
+                              .slice((userDetailEmotionPage - 1) * userDetailEmotionPageSize, userDetailEmotionPage * userDetailEmotionPageSize)
+                              .map((emotion, index) => {
+                                const analysisDate = emotion.analysisDate ? toKoreanTime(emotion.analysisDate) : null;
+                                const dateLine = analysisDate ? analysisDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' }) : '-';
+                                const timeLine = analysisDate ? analysisDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+
+                                return (
+                                  <tr key={index} style={{ borderBottom: '1px solid var(--admin-border)' }}>
+                                    <td style={{ padding: '8px 4px', verticalAlign: 'middle' }}>
+                                      <div style={{ lineHeight: '1.4' }}>
+                                        <div>{dateLine}</div>
+                                        <div style={{ color: 'var(--admin-text-light)', fontSize: '12px' }}>{timeLine}</div>
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '4px 2px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                      <span style={{
+                                        display: 'inline-block',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: '500',
+                                        whiteSpace: 'nowrap',
+                                        background: getEmotionLevelFromScoreForStyle(emotion.emotionScore) === 'danger' ? '#FEE2E2' :
+                                                   getEmotionLevelFromScoreForStyle(emotion.emotionScore) === 'warning' ? '#FEF3C7' : '#D1FAE5',
+                                        color: getEmotionLevelFromScoreForStyle(emotion.emotionScore) === 'danger' ? '#DC2626' :
+                                               getEmotionLevelFromScoreForStyle(emotion.emotionScore) === 'warning' ? '#D97706' : '#059669'
+                                      }}>
+                                        {mapScoreToEmotion(emotion.emotionScore)}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', verticalAlign: 'middle' }}>
+                                      {emotion.emotionScore ?? '-'}
+                                    </td>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                      <span style={{
+                                        color: getEmotionLevelFromScoreForStyle(emotion.depressionScore) === 'danger' ? '#EF4444' :
+                                               getEmotionLevelFromScoreForStyle(emotion.depressionScore) === 'warning' ? '#F59E0B' : 'inherit'
+                                      }}>
+                                        {emotion.depressionScore ?? '-'}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                      <span style={{
+                                        color: getEmotionLevelFromScoreForStyle(emotion.anxietyScore) === 'danger' ? '#EF4444' :
+                                               getEmotionLevelFromScoreForStyle(emotion.anxietyScore) === 'warning' ? '#F59E0B' : 'inherit'
+                                      }}>
+                                        {emotion.anxietyScore ?? '-'}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '8px 4px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                      <span style={{
+                                        color: getEmotionLevelFromScoreForStyle(emotion.stressScore) === 'danger' ? '#EF4444' :
+                                               getEmotionLevelFromScoreForStyle(emotion.stressScore) === 'warning' ? '#F59E0B' : 'inherit'
+                                      }}>
+                                        {emotion.stressScore ?? '-'}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '8px 4px', verticalAlign: 'middle' }}>
+                                      <div style={{ fontSize: '12px', color: '#475569', lineHeight: '1.5' }}>
+                                        {emotion.keywords || '-'}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                        {/* 페이지네이션 */}
+                        {userDetailEmotionHistory.length > 0 && (
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: '16px',
+                            paddingTop: '16px',
+                            borderTop: '1px solid var(--admin-border)'
+                          }}>
+                            <div style={{ fontSize: '13px', color: 'var(--admin-text-light)' }}>
+                              {(userDetailEmotionPage - 1) * userDetailEmotionPageSize + 1}-{Math.min(userDetailEmotionPage * userDetailEmotionPageSize, userDetailEmotionHistory.length)} / 총 {userDetailEmotionHistory.length}건
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                onClick={() => setUserDetailEmotionPage(prev => Math.max(prev - 1, 1))}
+                                disabled={userDetailEmotionPage === 1}
+                                style={{
+                                  padding: '6px 12px',
+                                  border: '1px solid var(--admin-border)',
+                                  borderRadius: '4px',
+                                  background: userDetailEmotionPage === 1 ? 'var(--admin-bg)' : 'white',
+                                  color: userDetailEmotionPage === 1 ? 'var(--admin-text-light)' : 'var(--admin-text)',
+                                  cursor: userDetailEmotionPage === 1 ? 'not-allowed' : 'pointer',
+                                  fontSize: '13px'
+                                }}
+                              >
+                                이전
+                              </button>
+                              {Array.from({ length: Math.ceil(userDetailEmotionHistory.length / userDetailEmotionPageSize) }, (_, i) => i + 1).map(page => (
+                                <button
+                                  key={page}
+                                  onClick={() => setUserDetailEmotionPage(page)}
+                                  style={{
+                                    padding: '6px 10px',
+                                    border: '1px solid',
+                                    borderColor: page === userDetailEmotionPage ? 'var(--admin-primary)' : 'var(--admin-border)',
+                                    borderRadius: '4px',
+                                    background: page === userDetailEmotionPage ? 'var(--admin-primary)' : 'white',
+                                    color: page === userDetailEmotionPage ? 'white' : 'var(--admin-text)',
+                                    cursor: 'pointer',
+                                    fontSize: '13px',
+                                    fontWeight: page === userDetailEmotionPage ? '600' : '400'
+                                  }}
+                                >
+                                  {page}
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => setUserDetailEmotionPage(prev => Math.min(prev + 1, Math.ceil(userDetailEmotionHistory.length / userDetailEmotionPageSize)))}
+                                disabled={userDetailEmotionPage === Math.ceil(userDetailEmotionHistory.length / userDetailEmotionPageSize)}
+                                style={{
+                                  padding: '6px 12px',
+                                  border: '1px solid var(--admin-border)',
+                                  borderRadius: '4px',
+                                  background: userDetailEmotionPage === Math.ceil(userDetailEmotionHistory.length / userDetailEmotionPageSize) ? 'var(--admin-bg)' : 'white',
+                                  color: userDetailEmotionPage === Math.ceil(userDetailEmotionHistory.length / userDetailEmotionPageSize) ? 'var(--admin-text-light)' : 'var(--admin-text)',
+                                  cursor: userDetailEmotionPage === Math.ceil(userDetailEmotionHistory.length / userDetailEmotionPageSize) ? 'not-allowed' : 'pointer',
+                                  fontSize: '13px'
+                                }}
+                              >
+                                다음
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 상태 정보 */}
+                  <div style={{ background: 'var(--admin-bg)', padding: '20px', borderRadius: '8px' }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--admin-text-dark)' }}>상태 정보</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>현재 상태</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{getStatusText(selectedUserDetail.status)}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>감정 상태</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.emotionStatus}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>위험도</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{getRiskText(selectedUserDetail.riskLevel)}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>위험 점수</div>
+                        <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.riskScore}점</div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={closeUserDetailModal}>닫기</button>
             </div>
           </div>
         </div>

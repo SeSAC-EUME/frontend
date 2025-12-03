@@ -24,6 +24,14 @@ const defaultStats = {
   avgSatisfaction: 0,
 };
 
+// 기본 감정 분포 (API 폴백용)
+const defaultEmotionDistribution = [
+  { emotion: '안전', count: 0, percentage: 0, color: '#10B981' },
+  { emotion: '주의', count: 0, percentage: 0, color: '#F59E0B' },
+  { emotion: '고위험', count: 0, percentage: 0, color: '#EF4444' },
+  { emotion: '매우 심각', count: 0, percentage: 0, color: '#DC2626' },
+];
+
 // 날짜를 YYYY-MM-DD 형식으로 포맷
 const formatDate = (date) => {
   const year = date.getFullYear();
@@ -46,6 +54,8 @@ const getDefaultDateRange = () => {
 function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(defaultStats);
+  const [emotionDistribution, setEmotionDistribution] = useState(defaultEmotionDistribution);
+  const [emotionPeriod, setEmotionPeriod] = useState('week');
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [dateRange, setDateRange] = useState(getDefaultDateRange);
@@ -54,6 +64,40 @@ function Dashboard() {
   useEffect(() => {
     loadDashboardData();
   }, [dateRange]);
+
+  // 감정 점수를 감정 라벨로 변환 (점수가 높을수록 위험)
+  const mapScoreToEmotion = (score) => {
+    if (score >= 80) return '매우 심각';
+    if (score >= 60) return '고위험';
+    if (score >= 30) return '주의';
+    return '안전';
+  };
+
+  // 감정 분포 기간 계산
+  const getEmotionDateRange = () => {
+    const endDate = new Date();
+    const startDate = new Date();
+    switch (emotionPeriod) {
+      case 'day':
+        startDate.setDate(startDate.getDate() - 1);
+        break;
+      case 'week':
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setDate(startDate.getDate() - 30);
+        break;
+      case 'quarter':
+        startDate.setDate(startDate.getDate() - 90);
+        break;
+      default:
+        startDate.setDate(startDate.getDate() - 7);
+    }
+    return {
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
+    };
+  };
 
   const loadDashboardData = async () => {
     setIsLoading(true);
@@ -70,11 +114,58 @@ function Dashboard() {
         emergencyAlerts: emotion.needAttentionUsers || defaultStats.emergencyAlerts,
         avgSatisfaction: emotion.avgEmotionScore || defaultStats.avgSatisfaction,
       });
+
+      // 감정 분포 데이터 로드
+      await loadEmotionDistribution();
     } catch (error) {
       console.error('대시보드 데이터 로드 오류:', error);
       // API 실패 시 기본값 사용
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadEmotionDistribution = async () => {
+    try {
+      const { startDate, endDate } = getEmotionDateRange();
+      const usersResponse = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS);
+      const users = Array.isArray(usersResponse) ? usersResponse : usersResponse.users || [];
+
+      const distribution = {
+        '안전': 0,
+        '주의': 0,
+        '고위험': 0,
+        '매우 심각': 0,
+      };
+
+      // 각 사용자의 최신 감정 데이터 조회
+      await Promise.all(users.map(async (user) => {
+        try {
+          const emotionResponse = await axiosInstance.get(
+            `${API_ENDPOINTS.ADMIN.USER_EMOTIONS(user.id)}?startDate=${startDate}&endDate=${endDate}&size=1`
+          );
+          const emotions = emotionResponse.emotions || [];
+          if (emotions.length > 0) {
+            const score = emotions[0].emotionScore ?? 0;
+            const emotionLabel = mapScoreToEmotion(score);
+            if (distribution[emotionLabel] !== undefined) {
+              distribution[emotionLabel]++;
+            }
+          }
+        } catch {
+          // 개별 사용자 오류 무시
+        }
+      }));
+
+      const total = Object.values(distribution).reduce((sum, count) => sum + count, 0) || 1;
+      setEmotionDistribution([
+        { emotion: '안전', count: distribution['안전'], percentage: Math.round((distribution['안전'] / total) * 100), color: '#10B981' },
+        { emotion: '주의', count: distribution['주의'], percentage: Math.round((distribution['주의'] / total) * 100), color: '#F59E0B' },
+        { emotion: '고위험', count: distribution['고위험'], percentage: Math.round((distribution['고위험'] / total) * 100), color: '#EF4444' },
+        { emotion: '매우 심각', count: distribution['매우 심각'], percentage: Math.round((distribution['매우 심각'] / total) * 100), color: '#DC2626' },
+      ]);
+    } catch (error) {
+      console.error('감정 분포 로드 오류:', error);
     }
   };
 
@@ -183,13 +274,99 @@ function Dashboard() {
             <div className="chart-card emotion-chart">
               <div className="chart-header">
                 <h3 className="chart-title">감정 분포</h3>
-                <select className="chart-filter">
-                  <option>최근 7일</option>
-                  <option>최근 30일</option>
-                  <option>최근 3개월</option>
+                <select
+                  className="chart-filter"
+                  value={emotionPeriod}
+                  onChange={(e) => {
+                    setEmotionPeriod(e.target.value);
+                    loadEmotionDistribution();
+                  }}
+                >
+                  <option value="day">오늘</option>
+                  <option value="week">최근 7일</option>
+                  <option value="month">최근 30일</option>
+                  <option value="quarter">최근 3개월</option>
                 </select>
               </div>
-              <div className="chart-body"></div>
+              <div className="chart-body" style={{ display: 'flex', gap: '24px', alignItems: 'center', padding: '16px' }}>
+                {/* 도넛 차트 */}
+                <div style={{ position: 'relative', width: '140px', height: '140px', flexShrink: 0 }}>
+                  <div
+                    style={{
+                      width: '140px',
+                      height: '140px',
+                      borderRadius: '50%',
+                      background: (() => {
+                        const total = emotionDistribution.reduce((sum, item) => sum + item.count, 0);
+                        if (total === 0) return '#E2E8F0';
+                        let cumulative = 0;
+                        const segments = emotionDistribution.map(item => {
+                          const start = cumulative;
+                          cumulative += (item.count / total) * 100;
+                          return `${item.color} ${start}% ${cumulative}%`;
+                        });
+                        return `conic-gradient(${segments.join(', ')})`;
+                      })(),
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '50%',
+                      background: 'white',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1E293B' }}>
+                      {emotionDistribution.reduce((sum, item) => sum + item.count, 0)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#64748B' }}>전체</div>
+                  </div>
+                </div>
+
+                {/* 범례 */}
+                <div style={{ flex: 1 }}>
+                  {emotionDistribution.map((item, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '8px 0',
+                        borderBottom: index < emotionDistribution.length - 1 ? '1px solid #F1F5F9' : 'none'
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '10px',
+                          height: '10px',
+                          borderRadius: '50%',
+                          background: item.color,
+                          marginRight: '10px',
+                          flexShrink: 0
+                        }}
+                      />
+                      <div style={{ flex: 1, fontSize: '13px', color: '#475569' }}>
+                        {item.emotion}
+                      </div>
+                      <div style={{ fontWeight: '600', fontSize: '14px', color: item.color, minWidth: '45px', textAlign: 'right' }}>
+                        {item.count}명
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#94A3B8', marginLeft: '8px', minWidth: '35px', textAlign: 'right' }}>
+                        {item.percentage}%
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="chart-card activity-chart">
