@@ -16,7 +16,7 @@ function Header({ isSidebarOpen, onToggleSidebar }) {
   };
 
   const handleSignup = () => {
-    navigate('/user/onboarding1');
+    navigate('/user/login');
   };
 
   const handleMyPage = () => {

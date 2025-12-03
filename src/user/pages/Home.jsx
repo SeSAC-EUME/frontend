@@ -17,12 +17,6 @@ const pinnedRooms = [
     icon: '＋',
   },
   {
-    id: 'policy-info',
-    title: '정책 정보',
-    description: '정책/제도 안내를 받아보세요',
-    icon: '⚖️',
-  },
-  {
     id: 'ieum-talk',
     title: '이음이 톡',
     description: '대화/정책 RAG로 먼저 제안하는 자동 상담',
@@ -41,14 +35,6 @@ const initialMessages = {
       text: '안녕하세요, 오늘 하루는 어떠셨어요?',
       sender: 'ai',
       timestamp: '09:12',
-    },
-  ],
-  'policy-info': [
-    {
-      id: 'msg-2',
-      text: '필요한 정책 키워드를 알려주시면 바로 찾아볼게요.',
-      sender: 'ai',
-      timestamp: '09:10',
     },
   ],
   'new-chat': [],
@@ -401,7 +387,7 @@ function Home() {
 
         if (selectedChatId === 'ieum-talk' && chatListId) {
           await loadChatContents(chatListId, page + 1, true);
-        } else if (!['new-chat', 'policy-info', 'ieum-talk'].includes(selectedChatId)) {
+        } else if (!['new-chat', 'ieum-talk'].includes(selectedChatId)) {
           await loadUserChatContents(selectedChatId, page + 1, true);
         }
 
@@ -439,7 +425,7 @@ function Home() {
 
     // 고정 채팅방이 아닌 경우 (일반 채팅방) 과거 대화 로드
     const roomIdStr = String(roomId);
-    const isPinnedRoom = ['new-chat', 'policy-info', 'ieum-talk'].includes(roomIdStr);
+    const isPinnedRoom = ['new-chat', 'ieum-talk'].includes(roomIdStr);
     const isTempRoom = roomIdStr.startsWith('temp-');
 
     if (!isPinnedRoom && !isTempRoom) {
@@ -627,26 +613,6 @@ function Home() {
           ...prev,
           [roomId]: [...(prev[roomId] || []), aiMessage],
         }));
-      } else if (roomId === 'policy-info') {
-        // 정책 정보 채팅방은 목업 유지 (별도 API 미구현)
-        setTimeout(() => {
-          const aiMessage = {
-            id: `ai-${Date.now()}`,
-            text: '정책 정보 검색 기능은 준비 중입니다.',
-            sender: 'ai',
-            timestamp: new Date().toLocaleTimeString('ko-KR', {
-              hour: '2-digit',
-              minute: '2-digit',
-            }),
-          };
-
-          // AI 응답: 하단 스크롤 플래그 설정
-          shouldScrollToBottom.current = true;
-          setMessagesByRoom((prev) => ({
-            ...prev,
-            [roomId]: [...(prev[roomId] || []), aiMessage],
-          }));
-        }, 600);
       } else {
         // 새 채팅방인 경우 먼저 생성 API 호출
         const roomIdStr = String(roomId);
@@ -660,10 +626,10 @@ function Home() {
           if (newChatId) {
             actualRoomId = newChatId;
 
-            // 채팅 목록에 새 채팅방 추가
+            // 채팅 목록에 새 채팅방 추가 (제목은 첫 메시지 텍스트)
             const newEntry = {
               id: newChatId,
-              title: createResponse.roomTitle || formatDateTitle(new Date().toISOString()),
+              title: messageText.length > 30 ? messageText.slice(0, 30) + '...' : messageText,
               updatedAt: '방금 전',
             };
             setChatHistory((prev) => [newEntry, ...prev]);

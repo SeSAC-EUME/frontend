@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
+import axiosRaw from '../../shared/api/axiosRaw';
 import { STORAGE_KEYS, clearAllUserData } from '../../shared/constants/storage';
 import { toBackendTheme } from '../../shared/utils/themeMapper';
 
@@ -24,6 +25,19 @@ function Settings() {
   const [textSize, setTextSizeState] = useState('large');
   const [selectedTheme, setSelectedTheme] = useState('ocean');
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    userName: '',
+    nickname: '',
+    birthDate: '',
+    gender: '',
+    phone: '',
+    sigunguId: '',
+    profileImage: '',
+  });
+  const [profileErrors, setProfileErrors] = useState({});
+  const [orgs, setOrgs] = useState([]);
+  const [orgsLoading, setOrgsLoading] = useState(false);
   const [settings, setSettings] = useState({
     textSize: 'large',
     theme: 'ocean',
@@ -64,6 +78,142 @@ function Settings() {
       localStorage.setItem('eume_settings', JSON.stringify(newSettings));
     } catch (e) {
       console.error('설정 저장 오류:', e);
+    }
+  };
+
+  // 기관 목록 로드
+  const loadOrgs = async () => {
+    if (orgs.length > 0) return; // 이미 로드됨
+    setOrgsLoading(true);
+    try {
+      const response = await axiosRaw.get(API_ENDPOINTS.ADMIN.ORGS);
+      setOrgs(response.data || []);
+    } catch (error) {
+      console.error('기관 목록 로드 실패:', error);
+    } finally {
+      setOrgsLoading(false);
+    }
+  };
+
+  // 프로필 수정 모달 열기
+  const openProfileModal = async () => {
+    // 기관 목록 로드
+    loadOrgs();
+
+    try {
+      // 백엔드에서 최신 사용자 정보 가져오기
+      const userData = await axiosInstance.get(API_ENDPOINTS.USER.ME);
+      setProfileForm({
+        userName: userData.userName || '',
+        nickname: userData.nickname || '',
+        birthDate: userData.birthDate || '',
+        gender: userData.gender || '',
+        phone: userData.phone || '',
+        sigunguId: userData.sigunguId || '',
+        profileImage: userData.profileImage || '',
+      });
+      setProfileErrors({});
+      setShowProfileModal(true);
+    } catch (error) {
+      console.error('사용자 정보 조회 오류:', error);
+      // 로컬 저장소에서 가져오기
+      const storedUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER_INFO) || '{}');
+      setProfileForm({
+        userName: storedUser.userName || '',
+        nickname: storedUser.nickname || '',
+        birthDate: storedUser.birthDate || '',
+        gender: storedUser.gender || '',
+        phone: storedUser.phone || '',
+        sigunguId: storedUser.sigunguId || '',
+        profileImage: storedUser.profileImage || '',
+      });
+      setProfileErrors({});
+      setShowProfileModal(true);
+    }
+  };
+
+  // 프로필 수정 모달 닫기
+  const closeProfileModal = () => {
+    setShowProfileModal(false);
+    setProfileErrors({});
+  };
+
+  // 프로필 폼 변경 핸들러
+  const handleProfileChange = (field, value) => {
+    setProfileForm((prev) => ({ ...prev, [field]: value }));
+    if (profileErrors[field]) {
+      setProfileErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // 전화번호 포맷
+  const formatPhoneNumber = (value) => {
+    const numbers = value.replace(/[^0-9]/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 7) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+    if (numbers.length <= 11) return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`;
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+  };
+
+  // 프로필 저장
+  const saveProfile = async () => {
+    // 유효성 검사
+    const errors = {};
+    if (!profileForm.userName.trim()) {
+      errors.userName = '이름을 입력해주세요';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setProfileErrors(errors);
+      return;
+    }
+
+    try {
+      // 백엔드에 프로필 업데이트
+      const profileData = {
+        userName: profileForm.userName,
+        nickName: profileForm.nickname,
+        birthDate: profileForm.birthDate || null,
+        gender: profileForm.gender ? profileForm.gender.toUpperCase() : null,
+        phone: profileForm.phone ? profileForm.phone.replace(/-/g, '') : null,
+        sigunguId: profileForm.sigunguId ? parseInt(profileForm.sigunguId, 10) : null,
+        profileImage: profileForm.profileImage || null,
+      };
+
+      const result = await axiosInstance.put(API_ENDPOINTS.USER.ME, profileData);
+
+      // 선택한 기관 이름 찾기
+      const selectedOrg = orgs.find(org => Number(org.id) === Number(profileForm.sigunguId));
+      const sigunguName = selectedOrg ? selectedOrg.name : '';
+
+      // 로컬 스토리지 업데이트
+      const storedUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.USER_INFO) || '{}');
+      const updatedUser = {
+        ...storedUser,
+        userName: result.userName || profileForm.userName,
+        nickname: result.nickname || profileForm.nickname,
+        birthDate: profileForm.birthDate,
+        gender: profileForm.gender,
+        phone: profileForm.phone,
+        sigunguId: profileForm.sigunguId,
+        sigunguName: sigunguName,
+        profileImage: profileForm.profileImage,
+      };
+      localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(updatedUser));
+
+      // 상태 업데이트
+      setUserInfo((prev) => ({
+        ...prev,
+        userName: result.userName || profileForm.userName,
+        nickname: result.nickname || profileForm.nickname,
+        profileImage: profileForm.profileImage,
+      }));
+
+      closeProfileModal();
+      showToast('프로필이 수정되었습니다');
+    } catch (error) {
+      console.error('프로필 수정 오류:', error);
+      showToast('프로필 수정 중 오류가 발생했습니다');
     }
   };
 
@@ -365,6 +515,9 @@ function Settings() {
                   <p className="profile-desc">{userInfo.email}</p>
                   {userInfo.nickname && <p className="profile-nickname">@{userInfo.nickname}</p>}
                 </div>
+                <button className="profile-edit-btn" onClick={openProfileModal}>
+                  내 정보 수정
+                </button>
               </div>
             </section>
 
@@ -619,6 +772,146 @@ function Settings() {
             <div className="modal-buttons">
               <button className="btn btn-secondary" onClick={closeThemeSelector}>취소</button>
               <button className="btn btn-primary" onClick={applyTheme}>적용</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 프로필 수정 모달 */}
+      {showProfileModal && (
+        <div className="theme-modal">
+          <div className="modal-content" style={{ maxWidth: '480px' }}>
+            <h3 className="modal-title">내 정보 수정</h3>
+            <div className="profile-form">
+              {/* 이름 */}
+              <div className="input-group">
+                <label className="input-label">이름</label>
+                <input
+                  type="text"
+                  className={`input input-large ${profileErrors.userName ? 'input-error' : ''}`}
+                  placeholder="홍길동"
+                  maxLength="20"
+                  value={profileForm.userName}
+                  onChange={(e) => handleProfileChange('userName', e.target.value)}
+                />
+                {profileErrors.userName && <p className="input-error-text">{profileErrors.userName}</p>}
+              </div>
+
+              {/* 닉네임 */}
+              <div className="input-group">
+                <label className="input-label">닉네임</label>
+                <input
+                  type="text"
+                  className="input input-large"
+                  placeholder="예: 철수, 영희"
+                  maxLength="10"
+                  value={profileForm.nickname}
+                  onChange={(e) => handleProfileChange('nickname', e.target.value)}
+                />
+              </div>
+
+              {/* 생년월일 */}
+              <div className="input-group">
+                <label className="input-label">생년월일</label>
+                <input
+                  type="date"
+                  className="input input-large"
+                  value={profileForm.birthDate}
+                  onChange={(e) => handleProfileChange('birthDate', e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              {/* 성별 */}
+              <div className="input-group">
+                <label className="input-label">성별</label>
+                <div className="gender-options">
+                  <button
+                    type="button"
+                    className={`gender-option ${profileForm.gender === 'M' ? 'selected' : ''}`}
+                    onClick={() => handleProfileChange('gender', 'M')}
+                  >
+                    남성
+                  </button>
+                  <button
+                    type="button"
+                    className={`gender-option ${profileForm.gender === 'F' ? 'selected' : ''}`}
+                    onClick={() => handleProfileChange('gender', 'F')}
+                  >
+                    여성
+                  </button>
+                </div>
+              </div>
+
+              {/* 전화번호 */}
+              <div className="input-group">
+                <label className="input-label">전화번호</label>
+                <input
+                  type="tel"
+                  className="input input-large"
+                  placeholder="010-1234-5678"
+                  maxLength="13"
+                  value={profileForm.phone}
+                  onChange={(e) => handleProfileChange('phone', formatPhoneNumber(e.target.value))}
+                />
+              </div>
+
+              {/* 소속 지역 (sigungu) */}
+              <div className="input-group">
+                <label className="input-label">소속 지역</label>
+                {orgsLoading ? (
+                  <div className="loading-text" style={{ padding: '12px', color: '#666' }}>
+                    지역 목록 로딩 중...
+                  </div>
+                ) : (
+                  <select
+                    className="input input-large"
+                    value={profileForm.sigunguId}
+                    onChange={(e) => handleProfileChange('sigunguId', e.target.value)}
+                  >
+                    <option value="">소속 지역을 선택하세요</option>
+                    {orgs.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* 프로필 이미지 URL */}
+              <div className="input-group">
+                <label className="input-label">프로필 이미지 URL</label>
+                <input
+                  type="url"
+                  className="input input-large"
+                  placeholder="https://example.com/image.jpg"
+                  value={profileForm.profileImage}
+                  onChange={(e) => handleProfileChange('profileImage', e.target.value)}
+                />
+                {profileForm.profileImage && (
+                  <div className="profile-image-preview" style={{ marginTop: '8px' }}>
+                    <img
+                      src={profileForm.profileImage}
+                      alt="프로필 미리보기"
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2px solid var(--primary-200)',
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-buttons">
+              <button className="btn btn-secondary" onClick={closeProfileModal}>취소</button>
+              <button className="btn btn-primary" onClick={saveProfile}>저장</button>
             </div>
           </div>
         </div>

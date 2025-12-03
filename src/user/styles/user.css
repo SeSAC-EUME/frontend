@@ -5136,10 +5136,38 @@ body.dark-mode {
 .profile-card {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: var(--spacing-3);
     padding: var(--spacing-3);
     background: rgba(255, 255, 255, 0.95);
     border-radius: var(--radius-xl);
+}
+
+.profile-edit-btn {
+    margin-left: auto;
+    padding: var(--spacing-2) var(--spacing-4);
+    background: var(--primary-500);
+    color: var(--white);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.profile-edit-btn:hover {
+    background: var(--primary-600);
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    margin: var(--spacing-4) 0;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: var(--spacing-2);
 }
 
 .profile-avatar {

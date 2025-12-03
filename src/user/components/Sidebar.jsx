@@ -14,13 +14,6 @@ const pinnedRooms = [
     svgIcon: '/assets/new_chat.svg',
   },
   {
-    id: 'policy-info',
-    title: '정책 정보',
-    description: '정책/제도 안내를 받아보세요',
-    icon: '📚',
-    svgIcon: '/assets/documents.svg',
-  },
-  {
     id: 'ieum-talk',
     title: '이음이 톡',
     description: '대화/정책 RAG로 먼저 제안하는 자동 상담',
