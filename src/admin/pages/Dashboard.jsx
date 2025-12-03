@@ -65,14 +65,6 @@ function Dashboard() {
     loadDashboardData();
   }, [dateRange]);
 
-  // 감정 점수를 감정 라벨로 변환 (점수가 높을수록 위험)
-  const mapScoreToEmotion = (score) => {
-    if (score >= 80) return '매우 심각';
-    if (score >= 60) return '고위험';
-    if (score >= 30) return '주의';
-    return '안전';
-  };
-
   // 감정 분포 기간 계산
   const getEmotionDateRange = () => {
     const endDate = new Date();
@@ -128,41 +120,20 @@ function Dashboard() {
   const loadEmotionDistribution = async () => {
     try {
       const { startDate, endDate } = getEmotionDateRange();
-      const usersResponse = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS);
-      const users = Array.isArray(usersResponse) ? usersResponse : usersResponse.users || [];
+      const response = await axiosInstance.get(
+        API_ENDPOINTS.ADMIN.EMOTIONS_STATISTICS(startDate, endDate)
+      );
 
-      const distribution = {
-        '안전': 0,
-        '주의': 0,
-        '고위험': 0,
-        '매우 심각': 0,
-      };
+      // 감정 분포 데이터 (noData는 안전에 포함)
+      const dist = response.distribution || {};
+      const safeCount = (dist.safe?.count || 0) + (dist.noData?.count || 0);
+      const safePercentage = (dist.safe?.percentage || 0) + (dist.noData?.percentage || 0);
 
-      // 각 사용자의 최신 감정 데이터 조회
-      await Promise.all(users.map(async (user) => {
-        try {
-          const emotionResponse = await axiosInstance.get(
-            `${API_ENDPOINTS.ADMIN.USER_EMOTIONS(user.id)}?startDate=${startDate}&endDate=${endDate}&size=1`
-          );
-          const emotions = emotionResponse.emotions || [];
-          if (emotions.length > 0) {
-            const score = emotions[0].emotionScore ?? 0;
-            const emotionLabel = mapScoreToEmotion(score);
-            if (distribution[emotionLabel] !== undefined) {
-              distribution[emotionLabel]++;
-            }
-          }
-        } catch {
-          // 개별 사용자 오류 무시
-        }
-      }));
-
-      const total = Object.values(distribution).reduce((sum, count) => sum + count, 0) || 1;
       setEmotionDistribution([
-        { emotion: '안전', count: distribution['안전'], percentage: Math.round((distribution['안전'] / total) * 100), color: '#10B981' },
-        { emotion: '주의', count: distribution['주의'], percentage: Math.round((distribution['주의'] / total) * 100), color: '#F59E0B' },
-        { emotion: '고위험', count: distribution['고위험'], percentage: Math.round((distribution['고위험'] / total) * 100), color: '#EF4444' },
-        { emotion: '매우 심각', count: distribution['매우 심각'], percentage: Math.round((distribution['매우 심각'] / total) * 100), color: '#DC2626' },
+        { emotion: '안전', count: safeCount, percentage: Math.round(safePercentage), color: '#10B981' },
+        { emotion: '주의', count: dist.caution?.count || 0, percentage: Math.round(dist.caution?.percentage || 0), color: '#F59E0B' },
+        { emotion: '고위험', count: dist.highRisk?.count || 0, percentage: Math.round(dist.highRisk?.percentage || 0), color: '#EF4444' },
+        { emotion: '매우 심각', count: dist.critical?.count || 0, percentage: Math.round(dist.critical?.percentage || 0), color: '#DC2626' },
       ]);
     } catch (error) {
       console.error('감정 분포 로드 오류:', error);

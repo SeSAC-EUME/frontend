@@ -173,6 +173,7 @@ function Users() {
 
   // 사용자 목록 로드
   const [usersData, setUsersData] = useState([]);
+  const [totalUsers, setTotalUsers] = useState(0);  // API에서 받은 총 이용자 수
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -182,9 +183,13 @@ function Users() {
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS);
+      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS_ALL);
       // 백엔드 응답 구조에 따라 조정
-      const apiUsers = response.users || response || [];
+      const apiUsers = response.users || response.content || response || [];
+
+      // 총 이용자 수 저장 (API의 totalElements 사용)
+      const total = response.totalElements || apiUsers.length;
+      setTotalUsers(total);
 
       // API 응답을 프론트엔드 형식으로 매핑
       const mappedUsers = apiUsers.map(user => ({
@@ -555,7 +560,11 @@ function Users() {
           <div className="table-header">
             <div>
               <span className="table-title">이용자 목록</span>
-              <span className="table-count">총 {filteredUsers.length}명</span>
+              <span className="table-count">
+                {searchQuery || filters.status !== 'all' || filters.risk !== 'all' || filters.age !== 'all'
+                  ? `${filteredUsers.length}명 (전체 ${totalUsers}명)`
+                  : `총 ${totalUsers}명`}
+              </span>
             </div>
             <div className="table-actions">
               <button className="table-action-btn" onClick={() => window.location.reload()}>

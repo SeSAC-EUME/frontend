@@ -46,6 +46,13 @@ function EmotionMonitor() {
 
   // 이용자별 감정 현황 상태
   const [userEmotions, setUserEmotions] = useState([]);
+  const [totalUsersCount, setTotalUsersCount] = useState(0);  // API에서 받은 총 이용자 수
+
+  // 이용자별 감정 현황 페이지네이션 (서버 사이드)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [filteredTotalCount, setFilteredTotalCount] = useState(0);  // 필터링된 총 개수
 
   // 선택된 사용자 감정 상세
   const [selectedUserEmotion, setSelectedUserEmotion] = useState(null);
@@ -61,9 +68,10 @@ function EmotionMonitor() {
   const [userDetailEmotionPage, setUserDetailEmotionPage] = useState(1);
   const [userDetailEmotionPageSize, setUserDetailEmotionPageSize] = useState(5);
 
-  // 데이터 로드
+  // 기간 변경 시 통계 + 페이지 초기화
   useEffect(() => {
-    loadEmotionData();
+    loadEmotionStatistics();
+    setCurrentPage(1);  // 기간 변경 시 페이지 초기화
   }, [selectedPeriod]);
 
   // 기간에 따른 날짜 범위 계산
@@ -94,73 +102,122 @@ function EmotionMonitor() {
     };
   };
 
-  // 감정 데이터 로드
+  // 감정 통계 로드 (감정 분포 차트용)
+  const loadEmotionStatistics = async () => {
+    try {
+      const { startDate, endDate } = getDateRange();
+      const response = await axiosInstance.get(
+        API_ENDPOINTS.ADMIN.EMOTIONS_STATISTICS(startDate, endDate)
+      );
+
+      // 총 이용자 수
+      setTotalUsersCount(response.totalUsers || 0);
+
+      // 통계 카드용 데이터 (noData는 안전에 포함)
+      const summary = response.summary || {};
+      const safeWithNoData = (summary.safe || 0) + (summary.noData || 0);
+      setEmotionStats({
+        총이용자: response.totalUsers || 0,
+        안전: safeWithNoData,
+        주의: summary.caution || 0,
+        위험: (summary.highRisk || 0) + (summary.critical || 0),
+      });
+
+      // 감정 분포 차트용 데이터 (noData는 안전에 포함)
+      const dist = response.distribution || {};
+      const safeCount = (dist.safe?.count || 0) + (dist.noData?.count || 0);
+      const safePercentage = (dist.safe?.percentage || 0) + (dist.noData?.percentage || 0);
+      setEmotionDistribution([
+        {
+          emotion: '안전',
+          count: safeCount,
+          percentage: Math.round(safePercentage),
+          color: '#10B981'
+        },
+        {
+          emotion: '주의',
+          count: dist.caution?.count || 0,
+          percentage: Math.round(dist.caution?.percentage || 0),
+          color: '#F59E0B'
+        },
+        {
+          emotion: '고위험',
+          count: dist.highRisk?.count || 0,
+          percentage: Math.round(dist.highRisk?.percentage || 0),
+          color: '#EF4444'
+        },
+        {
+          emotion: '매우 심각',
+          count: dist.critical?.count || 0,
+          percentage: Math.round(dist.critical?.percentage || 0),
+          color: '#DC2626'
+        },
+      ]);
+    } catch (error) {
+      console.error('감정 통계 로드 오류:', error);
+    }
+  };
+
+  // 이용자별 감정 현황 로드 (테이블용)
+  const loadUserEmotions = async (page = 0, emotionLevel = 'all') => {
+    try {
+      const { startDate, endDate } = getDateRange();
+      const response = await axiosInstance.get(
+        API_ENDPOINTS.ADMIN.USERS_EMOTIONS_LATEST(page, itemsPerPage, startDate, endDate, emotionLevel)
+      );
+
+      const users = response.users || [];
+
+      // API 응답을 프론트엔드 형식으로 매핑
+      const mappedUsers = users.map((user) => {
+        const emotion = user.latestEmotion;
+        const emotionScore = emotion?.emotionScore ?? 0;
+        const previousScore = user.previousEmotionScore;
+
+        // 추세 계산
+        let trend = 'stable';
+        if (previousScore !== null && previousScore !== undefined) {
+          if (emotionScore > previousScore + 5) trend = 'up';
+          else if (emotionScore < previousScore - 5) trend = 'down';
+        }
+
+        return {
+          id: user.userId,
+          name: user.userName || user.nickname || '사용자',
+          age: calculateAge(user.birthDate),
+          currentEmotion: user.hasEmotionData ? mapScoreToEmotion(emotionScore) : '안전',
+          emotionLevel: getEmotionLevelFromScore(emotionScore),
+          trend,
+          lastUpdate: formatDateTime(emotion?.analysisDate || user.lastLoginDate),
+          emotionScore,
+          depressionScore: emotion?.depressionScore ?? 0,
+          anxietyScore: emotion?.anxietyScore ?? 0,
+          stressScore: emotion?.stressScore ?? 0,
+          keywords: emotion?.keywords || [],
+          conversationCount: user.conversationCount || 0,
+          hasEmotionData: user.hasEmotionData,
+        };
+      });
+
+      setUserEmotions(mappedUsers);
+
+      // 서버 페이지네이션 정보
+      setTotalPages(response.totalPages || 1);
+      setFilteredTotalCount(response.totalElements || users.length);
+    } catch (error) {
+      console.error('이용자 감정 데이터 로드 오류:', error);
+    }
+  };
+
+  // 전체 감정 데이터 로드 (통계 + 이용자 목록)
   const loadEmotionData = async () => {
     setIsLoading(true);
     try {
-      // 사용자 목록 조회
-      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS);
-      const users = Array.isArray(response) ? response : response.users || [];
-
-      const { startDate, endDate } = getDateRange();
-
-      // 각 사용자의 감정 데이터 조회
-      const emotionDataPromises = users.map(async (user) => {
-        const userId = user.id || user.userId;
-        try {
-          const emotionResponse = await axiosInstance.get(
-            `${API_ENDPOINTS.ADMIN.USER_EMOTIONS(userId)}?startDate=${startDate}&endDate=${endDate}&size=10`
-          );
-          const emotions = emotionResponse.emotions || [];
-          const latestEmotion = emotions[0] || null;
-
-          // 감정 점수 기반으로 감정 상태 결정
-          const emotionScore = latestEmotion?.emotionScore ?? 50;
-          const currentEmotion = mapScoreToEmotion(emotionScore);
-          const trend = calculateTrend(emotions);
-
-          return {
-            id: userId,
-            name: user.userName || user.name || '사용자',
-            age: calculateAge(user.birthDate),
-            currentEmotion,
-            emotionLevel: getEmotionLevelFromScore(emotionScore),
-            trend,
-            lastUpdate: formatDateTime(latestEmotion?.analysisDate || user.lastLoginDate),
-            emotionScore,
-            depressionScore: latestEmotion?.depressionScore ?? 0,
-            anxietyScore: latestEmotion?.anxietyScore ?? 0,
-            stressScore: latestEmotion?.stressScore ?? 0,
-            keywords: latestEmotion?.keywords || [],
-            conversationCount: user.conversationCount || 0,
-            hasEmotionData: emotions.length > 0,
-          };
-        } catch {
-          // 감정 데이터 없는 경우
-          return {
-            id: userId,
-            name: user.userName || user.name || '사용자',
-            age: calculateAge(user.birthDate),
-            currentEmotion: '데이터 없음',
-            emotionLevel: 'none',
-            trend: 'stable',
-            lastUpdate: formatDateTime(user.lastLoginDate),
-            emotionScore: 0,
-            depressionScore: 0,
-            anxietyScore: 0,
-            stressScore: 0,
-            keywords: [],
-            conversationCount: user.conversationCount || 0,
-            hasEmotionData: false,
-          };
-        }
-      });
-
-      const emotionData = await Promise.all(emotionDataPromises);
-      setUserEmotions(emotionData);
-
-      // 통계 계산
-      calculateStats(emotionData);
+      // 두 API를 병렬로 호출
+      await Promise.all([
+        loadEmotionStatistics(),
+        loadUserEmotions(currentPage - 1, selectedEmotion === 'all' ? 'all' : selectedEmotion),
+      ]);
     } catch (error) {
       console.error('감정 데이터 로드 오류:', error);
     } finally {
@@ -182,55 +239,6 @@ function EmotionMonitor() {
     if (score >= 60) return 'high'; // 고위험
     if (score >= 30) return 'medium'; // 주의
     return 'low'; // 안전
-  };
-
-  // 추세 계산 (점수가 올라가면 악화, 내려가면 개선)
-  const calculateTrend = (emotions) => {
-    if (emotions.length < 2) return 'stable';
-    const recent = emotions[0]?.emotionScore ?? 50;
-    const previous = emotions[1]?.emotionScore ?? 50;
-    if (recent > previous + 5) return 'up'; // 점수 상승 = 상태 악화
-    if (recent < previous - 5) return 'down'; // 점수 하락 = 상태 개선
-    return 'stable';
-  };
-
-  // 통계 계산 (점수가 높을수록 위험)
-  const calculateStats = (users) => {
-    const stats = {
-      총이용자: users.length,
-      안전: 0,    // 0~29점
-      주의: 0,    // 30~59점
-      위험: 0,    // 60점 이상
-    };
-
-    const distribution = {
-      '안전': 0,
-      '주의': 0,
-      '고위험': 0,
-      '매우 심각': 0,
-    };
-
-    users.forEach((user) => {
-      const emotion = user.currentEmotion;
-      if (emotion === '안전') stats.안전++;
-      else if (emotion === '주의') stats.주의++;
-      else if (['고위험', '매우 심각'].includes(emotion)) stats.위험++;
-
-      if (distribution[emotion] !== undefined) {
-        distribution[emotion]++;
-      }
-    });
-
-    setEmotionStats(stats);
-
-    // 분포 계산
-    const total = users.length || 1;
-    setEmotionDistribution([
-      { emotion: '안전', count: distribution['안전'], percentage: Math.round((distribution['안전'] / total) * 100), color: '#10B981' },
-      { emotion: '주의', count: distribution['주의'], percentage: Math.round((distribution['주의'] / total) * 100), color: '#F59E0B' },
-      { emotion: '고위험', count: distribution['고위험'], percentage: Math.round((distribution['고위험'] / total) * 100), color: '#EF4444' },
-      { emotion: '매우 심각', count: distribution['매우 심각'], percentage: Math.round((distribution['매우 심각'] / total) * 100), color: '#DC2626' },
-    ]);
   };
 
   // 나이 계산
@@ -430,14 +438,27 @@ function EmotionMonitor() {
     setUserEmotionHistory([]);
   };
 
-  // 필터링된 사용자
-  const filteredUsers = userEmotions.filter(user => {
-    if (selectedEmotion === 'all') return true;
-    if (selectedEmotion === 'safe') return user.currentEmotion === '안전';
-    if (selectedEmotion === 'caution') return user.currentEmotion === '주의';
-    if (selectedEmotion === 'danger') return ['고위험', '매우 심각'].includes(user.currentEmotion);
-    return true;
-  });
+  // 필터, 페이지, 기간 변경 시 이용자 목록 API 재호출
+  useEffect(() => {
+    const loadFilteredData = async () => {
+      setIsLoading(true);
+      try {
+        // 감정 필터 값을 API 파라미터로 변환
+        const emotionLevel = selectedEmotion === 'all' ? 'all' : selectedEmotion;
+        await loadUserEmotions(currentPage - 1, emotionLevel);
+      } catch (error) {
+        console.error('필터링된 데이터 로드 오류:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadFilteredData();
+  }, [selectedEmotion, currentPage, itemsPerPage, selectedPeriod]);
+
+  // 필터 변경 시 페이지 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedEmotion]);
 
   return (
     <AdminLayout>
@@ -661,7 +682,11 @@ function EmotionMonitor() {
         <div className="card-header">
           <div>
             <h3>이용자별 감정 현황</h3>
-            <span className="card-subtitle">{filteredUsers.length}명의 이용자</span>
+            <span className="card-subtitle">
+              {selectedEmotion !== 'all'
+                ? `${filteredTotalCount}명 (전체 ${totalUsersCount}명)`
+                : `총 ${totalUsersCount}명`}
+            </span>
           </div>
         </div>
 
@@ -681,7 +706,7 @@ function EmotionMonitor() {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map(user => (
+              {userEmotions.map(user => (
                 <tr key={user.id}>
                   <td>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -785,6 +810,91 @@ function EmotionMonitor() {
             </tbody>
           </table>
         </div>
+
+        {/* 페이지네이션 */}
+        {filteredTotalCount > 0 && (
+          <div className="pagination" style={{ marginTop: '16px', padding: '16px 0', borderTop: '1px solid var(--admin-border)' }}>
+            <div className="pagination-info" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span>
+                {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredTotalCount)} / {filteredTotalCount}명
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', color: 'var(--admin-text-light)' }}>페이지당:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--admin-border)',
+                    fontSize: '13px',
+                    background: 'white',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value={10}>10명</option>
+                  <option value={20}>20명</option>
+                  <option value={50}>50명</option>
+                  <option value={100}>100명</option>
+                </select>
+              </div>
+            </div>
+            <div className="pagination-controls">
+              <button
+                className="pagination-btn"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(1)}
+              >
+                처음
+              </button>
+              <button
+                className="pagination-btn"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(currentPage - 1)}
+              >
+                이전
+              </button>
+              {/* 페이지 번호 버튼 - 최대 5개 표시 */}
+              {(() => {
+                const pages = [];
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, startPage + 4);
+                if (endPage - startPage < 4) {
+                  startPage = Math.max(1, endPage - 4);
+                }
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(
+                    <button
+                      key={i}
+                      className={`pagination-btn ${i === currentPage ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(i)}
+                    >
+                      {i}
+                    </button>
+                  );
+                }
+                return pages;
+              })()}
+              <button
+                className="pagination-btn"
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(currentPage + 1)}
+              >
+                다음
+              </button>
+              <button
+                className="pagination-btn"
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(totalPages)}
+              >
+                마지막
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 감정 상세 모달 */}
