@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../shared/assets/logo.svg';
+import messageCircleIcon from '../assets/icons/message-circle.svg';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
 import { STORAGE_KEYS, clearAllUserData } from '../../shared/constants/storage';
@@ -189,7 +190,7 @@ function Sidebar({
                 onClick={() => onSelectRoom(chat.id)}
                 title={chat.title}
               >
-                <span className="chat-history-icon">💬</span>
+                <img src={messageCircleIcon} alt="" className="chat-history-icon" />
                 <div className="chat-history-info">
                   <span className="chat-history-title">{chat.title}</span>
                   <span className="chat-history-time">{chat.updatedAt}</span>
