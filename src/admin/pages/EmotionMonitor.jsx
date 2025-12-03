@@ -738,7 +738,7 @@ function EmotionMonitor() {
                         <div style={{
                           width: `${user.emotionScore}%`,
                           height: '100%',
-                          background: user.emotionScore >= 60 ? '#10B981' : user.emotionScore >= 40 ? '#FCD34D' : '#EF4444',
+                          background: user.emotionScore >= 60 ? '#EF4444' : user.emotionScore >= 30 ? '#F59E0B' : '#10B981',
                           borderRadius: '3px'
                         }} />
                       </div>

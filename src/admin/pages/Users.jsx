@@ -180,37 +180,65 @@ function Users() {
     loadUsers();
   }, []);
 
+  // 감정 점수를 위험 레벨로 변환
+  const getEmotionLevel = (score) => {
+    if (score >= 60) return 'high';
+    if (score >= 30) return 'medium';
+    return 'low';
+  };
+
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS_ALL);
+      // 사용자 목록과 감정 데이터를 병렬로 로드
+      const [usersResponse, emotionsResponse] = await Promise.all([
+        axiosInstance.get(API_ENDPOINTS.ADMIN.USERS_ALL),
+        axiosInstance.get(API_ENDPOINTS.ADMIN.USERS_EMOTIONS_LATEST(0, 1000)),
+      ]);
+
       // 백엔드 응답 구조에 따라 조정
-      const apiUsers = response.users || response.content || response || [];
+      const apiUsers = usersResponse.users || usersResponse.content || usersResponse || [];
+      const emotionUsers = emotionsResponse.users || [];
+
+      // 감정 데이터를 userId로 매핑
+      const emotionMap = new Map();
+      emotionUsers.forEach(eu => {
+        emotionMap.set(eu.userId, {
+          emotionScore: eu.latestEmotion?.emotionScore ?? 0,
+          hasEmotionData: eu.hasEmotionData,
+        });
+      });
 
       // 총 이용자 수 저장 (API의 totalElements 사용)
-      const total = response.totalElements || apiUsers.length;
+      const total = usersResponse.totalElements || apiUsers.length;
       setTotalUsers(total);
 
-      // API 응답을 프론트엔드 형식으로 매핑
-      const mappedUsers = apiUsers.map(user => ({
-        id: user.id,
-        name: user.userName || user.nickname || '이름 없음',
-        age: user.age || '-',
-        gender: user.gender || '-',
-        address: user.sigunguName || '-',
-        phone: user.phone || '-',
-        status: user.userStatus?.toLowerCase() || 'active',
-        riskLevel: user.riskLevel || 'low',
-        riskScore: user.riskScore || 0,
-        lastActive: formatKoreanDateTime(user.lastLoginDate),
-        joinDate: formatKoreanDate(user.createdAt),
-        emotionStatus: user.emotionStatus || '-',
-        conversationCount: user.conversationCount || 0,
-        emergencyCount: user.emergencyCount || 0,
-        email: user.email || '-',
-        nickname: user.nickname || '-',
-        profileImage: user.profileImage || '',
-      }));
+      // API 응답을 프론트엔드 형식으로 매핑 (감정 데이터 포함)
+      const mappedUsers = apiUsers.map(user => {
+        const emotionData = emotionMap.get(user.id) || { emotionScore: 0, hasEmotionData: false };
+        const emotionScore = emotionData.emotionScore;
+
+        return {
+          id: user.id,
+          name: user.userName || user.nickname || '이름 없음',
+          age: user.age || '-',
+          gender: user.gender || '-',
+          address: user.sigunguName || '-',
+          phone: user.phone || '-',
+          status: user.userStatus?.toLowerCase() || 'active',
+          riskLevel: getEmotionLevel(emotionScore),
+          riskScore: emotionScore,
+          lastActive: formatKoreanDateTime(user.lastLoginDate),
+          joinDate: formatKoreanDate(user.createdAt),
+          emotionStatus: user.emotionStatus || '-',
+          conversationCount: user.conversationCount || 0,
+          emergencyCount: user.emergencyCount || 0,
+          email: user.email || '-',
+          nickname: user.nickname || '-',
+          profileImage: user.profileImage || '',
+          hasEmotionData: emotionData.hasEmotionData,
+        };
+      });
 
       setUsersData(mappedUsers);
     } catch (error) {
