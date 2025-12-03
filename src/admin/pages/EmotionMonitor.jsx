@@ -4,6 +4,7 @@ import AdminLayout from '../components/AdminLayout';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
 import axiosBlob, { downloadBlob, extractFilename } from '../../shared/api/axiosBlob';
+import { toKoreanTime } from '../../shared/utils/dateUtils';
 import '../styles/admin.css';
 import '../styles/admin-responsive.css';
 
@@ -157,10 +158,10 @@ function EmotionMonitor() {
     return 'low';
   };
 
-  // 날짜 포맷
+  // 날짜 포맷 (UTC -> 한국 시간 변환)
   const formatDateTime = (dateString) => {
     if (!dateString) return '-';
-    const date = new Date(dateString);
+    const date = toKoreanTime(dateString);
     return date.toLocaleString('ko-KR', {
       year: 'numeric',
       month: '2-digit',

@@ -8,6 +8,12 @@ import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
 import axiosRaw from '../../shared/api/axiosRaw';
 import { STORAGE_KEYS } from '../../shared/constants/storage';
+import {
+  toKoreanTime,
+  formatKoreanTime,
+  formatRelativeTime as formatRelativeTimeUtil,
+  formatDateTitle as formatDateTitleUtil,
+} from '../../shared/utils/dateUtils';
 
 const pinnedRooms = [
   {
@@ -187,33 +193,9 @@ function Home() {
     }
   };
 
-  // 날짜를 채팅방 제목으로 포맷
-  const formatDateTitle = (dateString) => {
-    if (!dateString) return '새 채팅';
-    const date = new Date(dateString);
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${month}월 ${day}일 ${hours}:${minutes} 대화`;
-  };
-
-  // 상대 시간 포맷 (예: "방금 전", "1시간 전", "어제")
-  const formatRelativeTime = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMin = Math.floor(diffMs / 60000);
-    const diffHour = Math.floor(diffMs / 3600000);
-    const diffDay = Math.floor(diffMs / 86400000);
-
-    if (diffMin < 1) return '방금 전';
-    if (diffMin < 60) return `${diffMin}분 전`;
-    if (diffHour < 24) return `${diffHour}시간 전`;
-    if (diffDay === 1) return '어제';
-    if (diffDay < 7) return `${diffDay}일 전`;
-    return date.toLocaleDateString('ko-KR');
-  };
+  // 날짜 포맷 함수들은 dateUtils에서 import
+  const formatDateTitle = formatDateTitleUtil;
+  const formatRelativeTime = formatRelativeTimeUtil;
 
   // Eume AI 채팅방 생성 또는 조회
   const initializeEumeChat = async () => {
@@ -306,12 +288,7 @@ function Home() {
           id: `loaded-${content.id || index}-${page}`,
           text: content.messageContent || content.content || content.message,
           sender: content.messageType === 'USER' || content.sender === 'user' ? 'user' : 'ai',
-          timestamp: content.createdAt
-            ? new Date(content.createdAt).toLocaleTimeString('ko-KR', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
-            : '',
+          timestamp: formatKoreanTime(content.createdAt),
         }));
 
         // 서버에서 최신순으로 오는 경우 reverse (오래된 것이 위, 최신이 아래)
@@ -525,12 +502,7 @@ function Home() {
           id: `loaded-${content.id || index}-${page}`,
           text: content.messageContent || content.content || content.message,
           sender: content.messageType === 'USER' || content.sender === 'user' ? 'user' : 'ai',
-          timestamp: content.createdAt
-            ? new Date(content.createdAt).toLocaleTimeString('ko-KR', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
-            : '',
+          timestamp: formatKoreanTime(content.createdAt),
         }));
 
         // 서버에서 최신순으로 오는 경우 reverse (오래된 것이 위, 최신이 아래)

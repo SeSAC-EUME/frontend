@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
+import { toKoreanTime } from '../../shared/utils/dateUtils';
 import '../styles/admin.css';
 import '../styles/admin-responsive.css';
 
@@ -200,7 +201,7 @@ function Emergency() {
   };
 
   const formatDateTime = (dateStr) => {
-    const date = new Date(dateStr);
+    const date = toKoreanTime(dateStr);
     const now = new Date();
     const diff = now - date;
     const minutes = Math.floor(diff / 60000);

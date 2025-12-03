@@ -6,6 +6,7 @@ import '../styles/admin-responsive.css';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
 import axiosBlob, { downloadBlob, extractFilename } from '../../shared/api/axiosBlob';
+import { formatKoreanDateTime, formatKoreanDate, toKoreanTime } from '../../shared/utils/dateUtils';
 
 // 아이콘 import
 import downloadIcon from '../assets/icons/download.svg';
@@ -208,8 +209,8 @@ function Users() {
         status: user.userStatus?.toLowerCase() || 'active',
         riskLevel: user.riskLevel || 'low',
         riskScore: user.riskScore || 0,
-        lastActive: user.lastLoginDate ? new Date(user.lastLoginDate).toLocaleString('ko-KR') : '-',
-        joinDate: user.createdAt ? new Date(user.createdAt).toLocaleDateString('ko-KR') : '-',
+        lastActive: formatKoreanDateTime(user.lastLoginDate),
+        joinDate: formatKoreanDate(user.createdAt),
         guardian: user.guardian || '-',
         guardianPhone: user.guardianPhone || '-',
         emotionStatus: user.emotionStatus || '-',
@@ -413,7 +414,7 @@ function Users() {
   };
 
   const formatDateTime = (dateStr) => {
-    const date = new Date(dateStr);
+    const date = toKoreanTime(dateStr);
     const now = new Date();
     const diff = now - date;
     const minutes = Math.floor(diff / 60000);
