@@ -209,7 +209,12 @@ function Sidebar({
 
       <div className="sidebar-spacer"></div>
 
-      <div className="sidebar-profile-collapsed">
+      <div
+        className="sidebar-profile-collapsed"
+        onClick={() => navigate('/user/settings')}
+        style={{ cursor: 'pointer' }}
+        title="마이페이지"
+      >
         <div className="profile-avatar-small">
           {userInfo.profileImage ? (
             <img src={userInfo.profileImage} alt="프로필" />
