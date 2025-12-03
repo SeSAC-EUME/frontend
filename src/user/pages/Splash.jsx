@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/user.css';
-import logo from '../../shared/assets/logo.png';
+import logo from '../../shared/assets/logo.svg';
 import { STORAGE_KEYS } from '../../shared/constants/storage';
 
 function Splash() {
