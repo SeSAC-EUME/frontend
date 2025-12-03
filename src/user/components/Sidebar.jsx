@@ -35,6 +35,7 @@ function Sidebar({
   setIsUserMenuOpen,
   chatListPagination = { page: 0, hasMore: false, isLoading: false },
   onLoadMoreChatList,
+  hasNewEumeMessage = false,
 }) {
   const navigate = useNavigate();
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -141,6 +142,7 @@ function Sidebar({
             onClick={() => handleRoomClick(room.id)}
             title={room.title}
             aria-label={room.title}
+            style={{ position: 'relative' }}
           >
             <object
               data={room.svgIcon}
@@ -152,6 +154,23 @@ function Sidebar({
               <span style={{ fontSize: '24px' }}>{room.icon}</span>
             </object>
             {isSidebarOpen && <span className="sidebar-icon-text">{room.title}</span>}
+            {/* 이음이 톡 새 메시지 알림 표시 */}
+            {room.id === 'ieum-talk' && hasNewEumeMessage && (
+              <span
+                className="new-message-badge"
+                style={{
+                  position: 'absolute',
+                  top: '4px',
+                  right: isSidebarOpen ? '8px' : '4px',
+                  width: '10px',
+                  height: '10px',
+                  backgroundColor: '#EF4444',
+                  borderRadius: '50%',
+                  border: '2px solid var(--bg-primary)',
+                  animation: 'pulse 2s infinite',
+                }}
+              />
+            )}
           </button>
         ))}
       </div>

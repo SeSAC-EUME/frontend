@@ -38,6 +38,7 @@ function Settings() {
   const [profileErrors, setProfileErrors] = useState({});
   const [orgs, setOrgs] = useState([]);
   const [orgsLoading, setOrgsLoading] = useState(false);
+  const [hasNewEumeMessage, setHasNewEumeMessage] = useState(false); // 이음이 톡 새 메시지 알림
   const [settings, setSettings] = useState({
     textSize: 'large',
     theme: 'ocean',
@@ -70,6 +71,44 @@ function Settings() {
         }
       }, 300);
     }, 2500);
+  };
+
+  // 이음이 톡 새 메시지 확인 함수
+  const checkNewEumeMessage = async () => {
+    try {
+      const savedLastId = localStorage.getItem(STORAGE_KEYS.EUME_LAST_MESSAGE_ID);
+      let chatId = localStorage.getItem(STORAGE_KEYS.EUME_CHAT_ID);
+
+      if (!chatId) {
+        try {
+          const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
+          if (chatInfo.id) {
+            chatId = chatInfo.id;
+          }
+        } catch {
+          return;
+        }
+      }
+
+      if (!chatId) return;
+
+      const contentsResponse = await axiosInstance.get(
+        API_ENDPOINTS.EUME_CHAT.CONTENTS(chatId, 0, 1)
+      );
+
+      const contents = Array.isArray(contentsResponse)
+        ? contentsResponse
+        : contentsResponse.contents || contentsResponse.messages || [];
+
+      if (contents.length > 0 && contents[0]?.id) {
+        const latestId = String(contents[0].id);
+        if (savedLastId && latestId !== savedLastId) {
+          setHasNewEumeMessage(true);
+        }
+      }
+    } catch (error) {
+      console.error('이음이 톡 새 메시지 확인 오류:', error);
+    }
   };
 
   // 설정 저장 함수
@@ -252,6 +291,9 @@ function Settings() {
         console.error('설정 로드 오류:', e);
       }
     }
+
+    // 이음이 톡 새 메시지 확인
+    checkNewEumeMessage();
   }, []);
 
   // body 클래스 적용 (textSize, theme, highContrast)
@@ -491,6 +533,7 @@ function Settings() {
         userInfo={userInfo}
         isUserMenuOpen={isUserMenuOpen}
         setIsUserMenuOpen={setIsUserMenuOpen}
+        hasNewEumeMessage={hasNewEumeMessage}
       />
 
       <div className="chat-main" style={{ marginLeft: isSidebarOpen ? 320 : 60 }}>

@@ -217,6 +217,7 @@ function Users() {
         emergencyCount: user.emergencyCount || 0,
         email: user.email || '-',
         nickname: user.nickname || '-',
+        profileImage: user.profileImage || '',
       }));
 
       setUsersData(mappedUsers);
@@ -516,7 +517,6 @@ function Users() {
                   <input type="checkbox" checked={selectAll} onChange={handleSelectAll} />
                 </th>
                 <th className="sortable" onClick={() => handleSort('name')}>이용자</th>
-                <th>연락처</th>
                 <th>주소</th>
                 <th className="sortable" onClick={() => handleSort('status')}>상태</th>
                 <th className="sortable" onClick={() => handleSort('riskScore')}>위험도</th>
@@ -547,14 +547,40 @@ function Users() {
                     </td>
                     <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>
                       <div className="user-info-cell">
-                        <div className="user-avatar">{user.name?.[0] || '?'}</div>
+                        <div className="user-avatar">
+                          {user.profileImage ? (
+                            <img
+                              src={user.profileImage}
+                              alt={user.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <span
+                            style={{
+                              display: user.profileImage ? 'none' : 'flex',
+                              width: '100%',
+                              height: '100%',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            {user.name?.[0] || '?'}
+                          </span>
+                        </div>
                         <div className="user-details">
                           <span className="user-name">{user.name}</span>
-                          <span className="user-id">{user.age}세 · {user.gender}</span>
                         </div>
                       </div>
                     </td>
-                    <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>{user.phone}</td>
                     <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>{user.address}</td>
                     <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>
                       <span className={`status-badge ${user.status}`}>{getStatusText(user.status)}</span>

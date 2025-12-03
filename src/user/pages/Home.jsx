@@ -64,6 +64,7 @@ function Home() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true); // 인증 확인 상태
   const [paginationByRoom, setPaginationByRoom] = useState({}); // 페이지네이션 상태 { roomId: { page, hasMore, isLoadingMore } }
   const [chatListPagination, setChatListPagination] = useState({ page: 0, hasMore: false, isLoading: false }); // 채팅 목록 페이지네이션
+  const [hasNewEumeMessage, setHasNewEumeMessage] = useState(false); // 이음이 톡 새 메시지 알림
   const messagesContainerRef = useRef(null);
   const shouldScrollToBottom = useRef(false); // 하단 스크롤 필요 여부 플래그
 
@@ -296,6 +297,11 @@ function Home() {
       const hasMore = contentsResponse.hasNext ?? contents.length >= 20;
 
       if (contents.length > 0) {
+        // 초기 로드 시 가장 최근 메시지 ID 저장 (서버에서 최신순으로 오므로 첫 번째가 가장 최근)
+        if (!isLoadMore && contents[0]?.id) {
+          localStorage.setItem(STORAGE_KEYS.EUME_LAST_MESSAGE_ID, String(contents[0].id));
+        }
+
         const loadedMessages = contents.map((content, index) => ({
           id: `loaded-${content.id || index}-${page}`,
           text: content.messageContent || content.content || content.message,
@@ -342,6 +348,51 @@ function Home() {
         ...prev,
         [roomId]: { page: 0, hasMore: false, isLoadingMore: false },
       }));
+    }
+  };
+
+  // 이음이 톡 새 메시지 확인 함수
+  const checkNewEumeMessage = async () => {
+    try {
+      // 저장된 마지막 메시지 ID 가져오기
+      const savedLastId = localStorage.getItem(STORAGE_KEYS.EUME_LAST_MESSAGE_ID);
+
+      // 캐시된 채팅방 ID 또는 기존 chatListId 사용
+      let chatId = chatListId || localStorage.getItem(STORAGE_KEYS.EUME_CHAT_ID);
+
+      if (!chatId) {
+        // 채팅방 정보 조회
+        try {
+          const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
+          if (chatInfo.id) {
+            chatId = chatInfo.id;
+          }
+        } catch {
+          // 채팅방이 없으면 새 메시지 없음
+          return;
+        }
+      }
+
+      if (!chatId) return;
+
+      // 최신 메시지 조회 (첫 페이지만)
+      const contentsResponse = await axiosInstance.get(
+        API_ENDPOINTS.EUME_CHAT.CONTENTS(chatId, 0, 1)
+      );
+
+      const contents = Array.isArray(contentsResponse)
+        ? contentsResponse
+        : contentsResponse.contents || contentsResponse.messages || [];
+
+      if (contents.length > 0 && contents[0]?.id) {
+        const latestId = String(contents[0].id);
+        // 저장된 ID와 다르면 새 메시지가 있음
+        if (savedLastId && latestId !== savedLastId) {
+          setHasNewEumeMessage(true);
+        }
+      }
+    } catch (error) {
+      console.error('이음이 톡 새 메시지 확인 오류:', error);
     }
   };
 
@@ -418,13 +469,24 @@ function Home() {
     setPrompt('');
     setIsSidebarOpen(false);
 
+    const roomIdStr = String(roomId);
+
+    // 이음이 톡 선택 시 알림 제거
+    if (roomIdStr === 'ieum-talk') {
+      setHasNewEumeMessage(false);
+    }
+
+    // 새 채팅 화면 선택 시 이음이 톡 새 메시지 확인
+    if (roomIdStr === 'new-chat') {
+      checkNewEumeMessage();
+    }
+
     // 이미 메시지가 로드된 경우 스킵
     if (messagesByRoom[roomId] && messagesByRoom[roomId].length > 0) {
       return;
     }
 
     // 고정 채팅방이 아닌 경우 (일반 채팅방) 과거 대화 로드
-    const roomIdStr = String(roomId);
     const isPinnedRoom = ['new-chat', 'ieum-talk'].includes(roomIdStr);
     const isTempRoom = roomIdStr.startsWith('temp-');
 
@@ -755,6 +817,7 @@ function Home() {
         setIsUserMenuOpen={setIsUserMenuOpen}
         chatListPagination={chatListPagination}
         onLoadMoreChatList={loadMoreChatList}
+        hasNewEumeMessage={hasNewEumeMessage}
       />
 
       <div className="chat-main" style={{ marginLeft: isSidebarOpen ? 320 : 60 }} ref={messagesContainerRef}>
