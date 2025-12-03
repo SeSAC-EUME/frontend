@@ -1530,13 +1530,15 @@ h3 {
     position: relative;
 }
 
-.search-input {
+.search-input,
+.search-input-wrapper input[type="text"] {
     width: 100%;
-    padding: 12px 16px 12px 44px;
+    padding: 12px 16px 12px 48px !important;
     border: 1px solid var(--admin-border);
     border-radius: 8px;
     font-size: 14px;
     transition: all 0.2s ease;
+    box-sizing: border-box;
 }
 
 .search-input:focus {
@@ -1561,17 +1563,20 @@ h3 {
     flex-wrap: wrap;
 }
 
-.filter-select {
-    padding: 10px 36px 10px 14px;
+.filter-select,
+.filter-group select {
+    padding: 10px 42px 10px 14px !important;
     border: 1px solid var(--admin-border);
     border-radius: 8px;
     font-size: 13px;
-    background: white;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
+    background-color: white !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 16px center !important;
     cursor: pointer;
-    appearance: none;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
     transition: all 0.2s ease;
 }
 
@@ -1717,12 +1722,21 @@ h3 {
 /* 체크박스 */
 .checkbox-cell {
     width: 48px;
+    text-align: center;
 }
 
-.checkbox-cell input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
+.checkbox-cell input[type="checkbox"],
+.user-checkbox,
+.users-table input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
+    max-width: 16px !important;
+    max-height: 16px !important;
     cursor: pointer;
+    accent-color: var(--admin-primary);
+    margin: 0 auto;
 }
 
 /* 사용자 정보 셀 */
@@ -1858,6 +1872,7 @@ h3 {
     border-radius: 6px;
     border: 1px solid var(--admin-border);
     background: white;
+    color: black;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1868,12 +1883,14 @@ h3 {
 .action-icon-btn:hover {
     background: var(--admin-bg);
     border-color: var(--admin-primary);
+    color: black;
 }
 
 .action-icon-btn img {
     width: 16px;
     height: 16px;
     filter: brightness(0) saturate(100%) invert(43%) sepia(81%) saturate(1840%) hue-rotate(208deg) brightness(97%) contrast(96%);
+    color: black;
 }
 
 /* 페이지네이션 */

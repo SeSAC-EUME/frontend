@@ -11,6 +11,9 @@ import axiosBlob, { downloadBlob, extractFilename } from '../../shared/api/axios
 import downloadIcon from '../assets/icons/download.svg';
 import usersIcon from '../assets/icons/users.svg';
 import refreshCwIcon from '../assets/icons/refresh-cw.svg';
+import userIcon from '../assets/icons/user.svg';
+import phoneIcon from '../assets/icons/phone.svg';
+import settingsIcon from '../assets/icons/settings.svg';
 
 function Users() {
   const navigate = useNavigate();
@@ -569,13 +572,13 @@ function Users() {
                     <td>
                       <div className="action-buttons">
                         <button className="action-icon-btn" onClick={() => viewUserDetail(user.id)} title="상세보기">
-                          <img src="/admin-ui/assets/icons/user.svg" alt="상세" />
+                          <img src={userIcon} alt="상세" />
                         </button>
                         <button className="action-icon-btn" onClick={() => callGuardian(user.id)} title="보호자 연락">
-                          <img src="/admin-ui/assets/icons/phone.svg" alt="전화" />
+                          <img src={phoneIcon} alt="전화" />
                         </button>
                         <button className="action-icon-btn" onClick={() => editUser(user.id)} title="정보수정">
-                          <img src="/admin-ui/assets/icons/settings.svg" alt="수정" />
+                          <img src={settingsIcon} alt="수정" />
                         </button>
                       </div>
                     </td>
