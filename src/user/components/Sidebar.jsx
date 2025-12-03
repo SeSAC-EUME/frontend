@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logo from '../../shared/assets/logo.svg';
+import messageCircleIcon from '../assets/icons/message-circle.svg';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
 import { STORAGE_KEYS, clearAllUserData } from '../../shared/constants/storage';
@@ -12,13 +13,6 @@ const pinnedRooms = [
     description: '빈 대화를 시작합니다',
     icon: '✏️',
     svgIcon: '/assets/new_chat.svg',
-  },
-  {
-    id: 'policy-info',
-    title: '정책 정보',
-    description: '정책/제도 안내를 받아보세요',
-    icon: '📚',
-    svgIcon: '/assets/documents.svg',
   },
   {
     id: 'ieum-talk',
@@ -40,9 +34,32 @@ function Sidebar({
   userInfo,
   isUserMenuOpen,
   setIsUserMenuOpen,
+  chatListPagination = { page: 0, hasMore: false, isLoading: false },
+  onLoadMoreChatList,
+  hasNewEumeMessage = false,
 }) {
   const navigate = useNavigate();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const chatHistoryListRef = useRef(null);
+
+  // 채팅 목록 무한 스크롤
+  useEffect(() => {
+    const container = chatHistoryListRef.current;
+    if (!container || !isSidebarOpen) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // 맨 아래에서 50px 이내일 때 추가 로드
+      if (scrollHeight - scrollTop - clientHeight < 50) {
+        if (chatListPagination.hasMore && !chatListPagination.isLoading && onLoadMoreChatList) {
+          onLoadMoreChatList();
+        }
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [isSidebarOpen, chatListPagination, onLoadMoreChatList]);
 
   // 로그인 여부 확인
   const isLoggedIn = () => {
@@ -126,6 +143,7 @@ function Sidebar({
             onClick={() => handleRoomClick(room.id)}
             title={room.title}
             aria-label={room.title}
+            style={{ position: 'relative' }}
           >
             <object
               data={room.svgIcon}
@@ -137,13 +155,66 @@ function Sidebar({
               <span style={{ fontSize: '24px' }}>{room.icon}</span>
             </object>
             {isSidebarOpen && <span className="sidebar-icon-text">{room.title}</span>}
+            {/* 이음이 톡 새 메시지 알림 표시 */}
+            {room.id === 'ieum-talk' && hasNewEumeMessage && (
+              <span
+                className="new-message-badge"
+                style={{
+                  position: 'absolute',
+                  top: '4px',
+                  right: isSidebarOpen ? '8px' : '4px',
+                  width: '10px',
+                  height: '10px',
+                  backgroundColor: '#EF4444',
+                  borderRadius: '50%',
+                  border: '2px solid var(--bg-primary)',
+                  animation: 'pulse 2s infinite',
+                }}
+              />
+            )}
           </button>
         ))}
       </div>
 
+      {/* 채팅방 목록 (사이드바가 열렸을 때만 표시) */}
+      {isSidebarOpen && chatHistory && chatHistory.length > 0 && (
+        <div className="sidebar-chat-history">
+          <div className="chat-history-header">
+            <span>채팅 기록</span>
+          </div>
+          <div className="chat-history-list" ref={chatHistoryListRef}>
+            {chatHistory.map((chat) => (
+              <button
+                key={chat.id}
+                className={`chat-history-item ${selectedChatId === chat.id ? 'active' : ''}`}
+                onClick={() => onSelectRoom(chat.id)}
+                title={chat.title}
+              >
+                <img src={messageCircleIcon} alt="" className="chat-history-icon" />
+                <div className="chat-history-info">
+                  <span className="chat-history-title">{chat.title}</span>
+                  <span className="chat-history-time">{chat.updatedAt}</span>
+                </div>
+              </button>
+            ))}
+            {/* 무한 스크롤 로딩 인디케이터 */}
+            {chatListPagination.isLoading && (
+              <div style={{ textAlign: 'center', padding: '10px', color: '#888', fontSize: '12px' }}>
+                불러오는 중...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="sidebar-spacer"></div>
 
-      <div className="sidebar-profile-collapsed">
+      <div
+        className="sidebar-profile-collapsed"
+        onClick={() => navigate('/user/settings')}
+        style={{ cursor: 'pointer' }}
+        title="마이페이지"
+      >
         <div className="profile-avatar-small">
           {userInfo.profileImage ? (
             <img src={userInfo.profileImage} alt="프로필" />

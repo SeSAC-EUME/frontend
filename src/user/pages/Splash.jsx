@@ -11,8 +11,6 @@ function Splash() {
     const timer = setTimeout(() => {
       // 로그인 상태 확인 (쿠키 기반 인증, localStorage는 캐시)
       const userInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO);
-      const hasVisited = localStorage.getItem(STORAGE_KEYS.USER_VISITED);
-      const onboardingComplete = localStorage.getItem(STORAGE_KEYS.USER_ONBOARDING);
 
       // 로그인 안 된 경우 -> 로그인 페이지
       if (!userInfo) {
@@ -20,13 +18,7 @@ function Splash() {
         return;
       }
 
-      // 로그인 됨 + 온보딩 미완료 -> 온보딩 페이지
-      if (!onboardingComplete) {
-        navigate('/user/onboarding-1');
-        return;
-      }
-
-      // 로그인 됨 + 온보딩 완료 -> 홈 페이지
+      // 로그인 됨 -> 홈 페이지
       navigate('/user/home');
     }, 1000);
 

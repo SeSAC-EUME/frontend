@@ -6,11 +6,15 @@ import '../styles/admin-responsive.css';
 import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
 import axiosBlob, { downloadBlob, extractFilename } from '../../shared/api/axiosBlob';
+import { formatKoreanDateTime, formatKoreanDate, toKoreanTime } from '../../shared/utils/dateUtils';
 
 // 아이콘 import
 import downloadIcon from '../assets/icons/download.svg';
 import usersIcon from '../assets/icons/users.svg';
 import refreshCwIcon from '../assets/icons/refresh-cw.svg';
+import userIcon from '../assets/icons/user.svg';
+import phoneIcon from '../assets/icons/phone.svg';
+import settingsIcon from '../assets/icons/settings.svg';
 
 function Users() {
   const navigate = useNavigate();
@@ -28,6 +32,10 @@ function Users() {
   const [selectedUserDetail, setSelectedUserDetail] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isLoadingUserDetail, setIsLoadingUserDetail] = useState(false);
+  const [userEmotionHistory, setUserEmotionHistory] = useState([]);
+  const [isLoadingEmotions, setIsLoadingEmotions] = useState(false);
+  const [emotionPage, setEmotionPage] = useState(1);
+  const [emotionPageSize, setEmotionPageSize] = useState(5);
 
   const itemsPerPage = 10;
 
@@ -45,8 +53,6 @@ function Users() {
       riskScore: 85,
       lastActive: '2025-11-26 09:30',
       joinDate: '2025-10-01',
-      guardian: '김영희 (모)',
-      guardianPhone: '010-9876-5432',
       emotionStatus: '우울',
       conversationCount: 45,
       emergencyCount: 2
@@ -63,8 +69,6 @@ function Users() {
       riskScore: 55,
       lastActive: '2025-11-25 14:20',
       joinDate: '2025-09-15',
-      guardian: '박철수 (부)',
-      guardianPhone: '010-8765-4321',
       emotionStatus: '보통',
       conversationCount: 32,
       emergencyCount: 1
@@ -81,8 +85,6 @@ function Users() {
       riskScore: 25,
       lastActive: '2025-11-26 10:15',
       joinDate: '2025-10-20',
-      guardian: '이영수 (부)',
-      guardianPhone: '010-7654-3210',
       emotionStatus: '좋음',
       conversationCount: 28,
       emergencyCount: 0
@@ -99,8 +101,6 @@ function Users() {
       riskScore: 30,
       lastActive: '2025-11-26 08:45',
       joinDate: '2025-09-01',
-      guardian: '최미경 (모)',
-      guardianPhone: '010-6543-2109',
       emotionStatus: '좋음',
       conversationCount: 52,
       emergencyCount: 0
@@ -117,8 +117,6 @@ function Users() {
       riskScore: 60,
       lastActive: '2025-11-25 16:30',
       joinDate: '2025-10-10',
-      guardian: '정미란 (모)',
-      guardianPhone: '010-5432-1098',
       emotionStatus: '보통',
       conversationCount: 38,
       emergencyCount: 1
@@ -135,8 +133,6 @@ function Users() {
       riskScore: 90,
       lastActive: '2025-11-20 11:20',
       joinDate: '2025-08-15',
-      guardian: '강동원 (부)',
-      guardianPhone: '010-4321-0987',
       emotionStatus: '매우 우울',
       conversationCount: 15,
       emergencyCount: 3
@@ -153,8 +149,6 @@ function Users() {
       riskScore: 20,
       lastActive: '2025-11-26 09:00',
       joinDate: '2025-10-25',
-      guardian: '한미숙 (모)',
-      guardianPhone: '010-3210-9876',
       emotionStatus: '매우 좋음',
       conversationCount: 22,
       emergencyCount: 0
@@ -171,8 +165,6 @@ function Users() {
       riskScore: 50,
       lastActive: '2025-11-25 19:45',
       joinDate: '2025-09-20',
-      guardian: '오병호 (부)',
-      guardianPhone: '010-2109-8765',
       emotionStatus: '보통',
       conversationCount: 41,
       emergencyCount: 1
@@ -181,18 +173,74 @@ function Users() {
 
   // 사용자 목록 로드
   const [usersData, setUsersData] = useState([]);
+  const [totalUsers, setTotalUsers] = useState(0);  // API에서 받은 총 이용자 수
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadUsers();
   }, []);
 
+  // 감정 점수를 위험 레벨로 변환
+  const getEmotionLevel = (score) => {
+    if (score >= 60) return 'high';
+    if (score >= 30) return 'medium';
+    return 'low';
+  };
+
   const loadUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.ADMIN.USERS);
+      // 사용자 목록과 감정 데이터를 병렬로 로드
+      const [usersResponse, emotionsResponse] = await Promise.all([
+        axiosInstance.get(API_ENDPOINTS.ADMIN.USERS_ALL),
+        axiosInstance.get(API_ENDPOINTS.ADMIN.USERS_EMOTIONS_LATEST(0, 1000)),
+      ]);
+
       // 백엔드 응답 구조에 따라 조정
-      setUsersData(response.users || response || []);
+      const apiUsers = usersResponse.users || usersResponse.content || usersResponse || [];
+      const emotionUsers = emotionsResponse.users || [];
+
+      // 감정 데이터를 userId로 매핑
+      const emotionMap = new Map();
+      emotionUsers.forEach(eu => {
+        emotionMap.set(eu.userId, {
+          emotionScore: eu.latestEmotion?.emotionScore ?? 0,
+          hasEmotionData: eu.hasEmotionData,
+        });
+      });
+
+      // 총 이용자 수 저장 (API의 totalElements 사용)
+      const total = usersResponse.totalElements || apiUsers.length;
+      setTotalUsers(total);
+
+      // API 응답을 프론트엔드 형식으로 매핑 (감정 데이터 포함)
+      const mappedUsers = apiUsers.map(user => {
+        const emotionData = emotionMap.get(user.id) || { emotionScore: 0, hasEmotionData: false };
+        const emotionScore = emotionData.emotionScore;
+
+        return {
+          id: user.id,
+          name: user.userName || user.nickname || '이름 없음',
+          age: user.age || '-',
+          gender: user.gender || '-',
+          address: user.sigunguName || '-',
+          phone: user.phone || '-',
+          status: user.userStatus?.toLowerCase() || 'active',
+          riskLevel: getEmotionLevel(emotionScore),
+          riskScore: emotionScore,
+          lastActive: formatKoreanDateTime(user.lastLoginDate),
+          joinDate: formatKoreanDate(user.createdAt),
+          emotionStatus: user.emotionStatus || '-',
+          conversationCount: user.conversationCount || 0,
+          emergencyCount: user.emergencyCount || 0,
+          email: user.email || '-',
+          nickname: user.nickname || '-',
+          profileImage: user.profileImage || '',
+          hasEmotionData: emotionData.hasEmotionData,
+        };
+      });
+
+      setUsersData(mappedUsers);
     } catch (error) {
       console.error('사용자 목록 로드 오류:', error);
       // API 실패 시 샘플 데이터 사용 (개발용)
@@ -212,9 +260,9 @@ function Users() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(user =>
-        user.name.toLowerCase().includes(query) ||
-        user.address.toLowerCase().includes(query) ||
-        user.phone.includes(query)
+        (user.name || '').toLowerCase().includes(query) ||
+        (user.address || '').toLowerCase().includes(query) ||
+        (user.phone || '').includes(query)
       );
     }
 
@@ -295,13 +343,55 @@ function Users() {
 
   const viewUserDetail = async (userId) => {
     setIsLoadingUserDetail(true);
+    setIsLoadingEmotions(true);
     setShowUserModal(true);
     document.body.style.overflow = 'hidden';
 
     try {
       // API에서 실시간 사용자 상세 정보 조회
       const userDetail = await axiosInstance.get(API_ENDPOINTS.ADMIN.USER_DETAIL(userId));
-      setSelectedUserDetail(userDetail);
+
+      // API 응답을 프론트엔드 형식으로 매핑
+      // 나이 계산 함수
+      const calculateAge = (birthDate) => {
+        if (!birthDate) return '-';
+        const birth = new Date(birthDate);
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+          age--;
+        }
+        return age;
+      };
+
+      // 주소 조합 (시도 + 시군구)
+      const fullAddress = [userDetail.sigungu?.sido, userDetail.sigungu?.sigungu]
+        .filter(Boolean)
+        .join(' ') || '-';
+
+      const mappedDetail = {
+        id: userDetail.id,
+        name: userDetail.userName || userDetail.nickname || '이름 없음',
+        age: calculateAge(userDetail.birthDate),
+        birthDate: userDetail.birthDate ? formatKoreanDate(userDetail.birthDate) : '-',
+        gender: userDetail.gender || '-',
+        address: fullAddress,
+        phone: userDetail.phone || '-',
+        status: userDetail.userStatus?.toLowerCase() || 'active',
+        riskLevel: userDetail.riskLevel || 'low',
+        riskScore: userDetail.riskScore || 0,
+        lastActive: formatKoreanDateTime(userDetail.lastLoginDate),
+        joinDate: formatKoreanDate(userDetail.createdAt),
+        emotionStatus: userDetail.emotionStatus || '-',
+        conversationCount: userDetail.conversationCount || 0,
+        emergencyCount: userDetail.emergencyCount || 0,
+        email: userDetail.email || '-',
+        nickname: userDetail.nickname || '-',
+        profileImage: userDetail.profileImage || '',
+      };
+
+      setSelectedUserDetail(mappedDetail);
     } catch (error) {
       console.error('사용자 상세 조회 오류:', error);
       // API 실패 시 로컬 데이터 사용 (폴백)
@@ -315,19 +405,28 @@ function Users() {
     } finally {
       setIsLoadingUserDetail(false);
     }
+
+    // 감정 이력 조회 (별도로 처리하여 사용자 정보 로딩과 독립적으로 진행)
+    try {
+      const emotionResponse = await axiosInstance.get(
+        `${API_ENDPOINTS.ADMIN.USER_EMOTIONS(userId)}?size=10`
+      );
+      setUserEmotionHistory(emotionResponse.emotions || []);
+    } catch (error) {
+      console.error('감정 이력 조회 오류:', error);
+      setUserEmotionHistory([]);
+    } finally {
+      setIsLoadingEmotions(false);
+    }
   };
 
   const closeUserDetailModal = () => {
     setShowUserModal(false);
     setSelectedUserDetail(null);
+    setUserEmotionHistory([]);
+    setEmotionPage(1);
+    setEmotionPageSize(5);
     document.body.style.overflow = 'auto';
-  };
-
-  const callGuardian = (userId) => {
-    const user = usersData.find(u => u.id === userId);
-    if (user && window.confirm(`${user.guardian}에게 연락하시겠습니까?\n전화번호: ${user.guardianPhone}`)) {
-      alert('보호자에게 연락 중...');
-    }
   };
 
   const editUser = (userId) => {
@@ -384,8 +483,26 @@ function Users() {
     return riskMap[level] || level;
   };
 
+  // 감정 점수를 감정 상태 텍스트로 변환 (점수가 높을수록 위험)
+  // 0~29: 안전, 30~59: 주의, 60~79: 고위험, 80~100: 매우 심각
+  const mapScoreToEmotion = (score) => {
+    if (score === null || score === undefined) return '-';
+    if (score >= 80) return '매우 심각';
+    if (score >= 60) return '고위험';
+    if (score >= 30) return '주의';
+    return '안전';
+  };
+
+  // 감정 점수에 따른 레벨 (스타일용) - 점수가 높을수록 위험
+  const getEmotionLevelFromScore = (score) => {
+    if (score === null || score === undefined) return 'normal';
+    if (score >= 60) return 'danger';
+    if (score >= 30) return 'warning';
+    return 'good';
+  };
+
   const formatDateTime = (dateStr) => {
-    const date = new Date(dateStr);
+    const date = toKoreanTime(dateStr);
     const now = new Date();
     const diff = now - date;
     const minutes = Math.floor(diff / 60000);
@@ -471,7 +588,11 @@ function Users() {
           <div className="table-header">
             <div>
               <span className="table-title">이용자 목록</span>
-              <span className="table-count">총 {filteredUsers.length}명</span>
+              <span className="table-count">
+                {searchQuery || filters.status !== 'all' || filters.risk !== 'all' || filters.age !== 'all'
+                  ? `${filteredUsers.length}명 (전체 ${totalUsers}명)`
+                  : `총 ${totalUsers}명`}
+              </span>
             </div>
             <div className="table-actions">
               <button className="table-action-btn" onClick={() => window.location.reload()}>
@@ -489,12 +610,10 @@ function Users() {
                   <input type="checkbox" checked={selectAll} onChange={handleSelectAll} />
                 </th>
                 <th className="sortable" onClick={() => handleSort('name')}>이용자</th>
-                <th>연락처</th>
                 <th>주소</th>
                 <th className="sortable" onClick={() => handleSort('status')}>상태</th>
                 <th className="sortable" onClick={() => handleSort('riskScore')}>위험도</th>
                 <th className="sortable" onClick={() => handleSort('lastActive')}>최근 활동</th>
-                <th>관리</th>
               </tr>
             </thead>
             <tbody>
@@ -521,14 +640,40 @@ function Users() {
                     </td>
                     <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>
                       <div className="user-info-cell">
-                        <div className="user-avatar">{user.name[0]}</div>
+                        <div className="user-avatar">
+                          {user.profileImage ? (
+                            <img
+                              src={user.profileImage}
+                              alt={user.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <span
+                            style={{
+                              display: user.profileImage ? 'none' : 'flex',
+                              width: '100%',
+                              height: '100%',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            {user.name?.[0] || '?'}
+                          </span>
+                        </div>
                         <div className="user-details">
                           <span className="user-name">{user.name}</span>
-                          <span className="user-id">{user.age}세 · {user.gender}</span>
                         </div>
                       </div>
                     </td>
-                    <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>{user.phone}</td>
                     <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>{user.address}</td>
                     <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>
                       <span className={`status-badge ${user.status}`}>{getStatusText(user.status)}</span>
@@ -542,19 +687,6 @@ function Users() {
                       </div>
                     </td>
                     <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>{formatDateTime(user.lastActive)}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="action-icon-btn" onClick={() => viewUserDetail(user.id)} title="상세보기">
-                          <img src="/admin-ui/assets/icons/user.svg" alt="상세" />
-                        </button>
-                        <button className="action-icon-btn" onClick={() => callGuardian(user.id)} title="보호자 연락">
-                          <img src="/admin-ui/assets/icons/phone.svg" alt="전화" />
-                        </button>
-                        <button className="action-icon-btn" onClick={() => editUser(user.id)} title="정보수정">
-                          <img src="/admin-ui/assets/icons/settings.svg" alt="수정" />
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))
               )}
@@ -600,9 +732,44 @@ function Users() {
         <div className="modal-overlay" style={{ display: 'flex' }} onClick={(e) => { if (e.target.className === 'modal-overlay') closeUserDetailModal(); }}>
           <div className="modal-container" style={{ maxWidth: '1200px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
-              <h3 className="modal-title">
-                {isLoadingUserDetail ? '정보 불러오는 중...' : `${selectedUserDetail?.name || ''} 님의 상세 정보`}
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {!isLoadingUserDetail && selectedUserDetail && (
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    background: 'var(--admin-primary-light)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    flexShrink: 0
+                  }}>
+                    {selectedUserDetail.profileImage ? (
+                      <img
+                        src={selectedUserDetail.profileImage}
+                        alt={selectedUserDetail.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <span style={{
+                      display: selectedUserDetail.profileImage ? 'none' : 'flex',
+                      fontSize: '20px',
+                      fontWeight: '600',
+                      color: 'var(--admin-primary)'
+                    }}>
+                      {selectedUserDetail.name?.[0] || '?'}
+                    </span>
+                  </div>
+                )}
+                <h3 className="modal-title">
+                  {isLoadingUserDetail ? '정보 불러오는 중...' : `${selectedUserDetail?.name || ''} 님의 상세 정보`}
+                </h3>
+              </div>
               <button className="modal-close" onClick={closeUserDetailModal}>×</button>
             </div>
             <div className="modal-body">
@@ -627,8 +794,12 @@ function Users() {
                     <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.name}</div>
                   </div>
                   <div>
+                    <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>생년월일</div>
+                    <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.birthDate}</div>
+                  </div>
+                  <div>
                     <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>나이</div>
-                    <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.age}세</div>
+                    <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.age !== '-' ? `${selectedUserDetail.age}세` : '-'}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>성별</div>
@@ -638,24 +809,9 @@ function Users() {
                     <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>전화번호</div>
                     <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.phone}</div>
                   </div>
-                  <div style={{ gridColumn: '1 / -1' }}>
+                  <div>
                     <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>주소</div>
                     <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.address}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 보호자 정보 */}
-              <div style={{ background: 'var(--admin-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '16px', color: 'var(--admin-text-dark)' }}>보호자 정보</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                  <div>
-                    <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>보호자</div>
-                    <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.guardian}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '13px', color: 'var(--admin-text-light)', marginBottom: '4px' }}>연락처</div>
-                    <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.guardianPhone}</div>
                   </div>
                 </div>
               </div>
@@ -681,6 +837,209 @@ function Users() {
                     <div style={{ fontSize: '15px', fontWeight: '500' }}>{selectedUserDetail.emergencyCount}건</div>
                   </div>
                 </div>
+              </div>
+
+              {/* 감정 이력 */}
+              <div style={{ background: 'var(--admin-bg)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--admin-text-dark)', margin: 0 }}>감정 분석 이력</h4>
+                  {userEmotionHistory.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--admin-text-light)' }}>표시 개수:</span>
+                      <select
+                        value={emotionPageSize}
+                        onChange={(e) => {
+                          setEmotionPageSize(Number(e.target.value));
+                          setEmotionPage(1);
+                        }}
+                        style={{
+                          padding: '4px 4px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--admin-border)',
+                          fontSize: '11px',
+                          background: 'white',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value={5}>5개</option>
+                        <option value={10}>10개</option>
+                        <option value={20}>20개</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+                {isLoadingEmotions ? (
+                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--admin-text-light)' }}>
+                    감정 이력을 불러오는 중...
+                  </div>
+                ) : userEmotionHistory.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '20px', color: 'var(--admin-text-light)' }}>
+                    감정 분석 이력이 없습니다
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--admin-border)' }}>
+                          <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', color: 'var(--admin-text-light)', width: '130px' }}>분석일</th>
+                          <th style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', color: 'var(--admin-text-light)', width: '70px' }}>감정 상태</th>
+                          <th style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', color: 'var(--admin-text-light)', width: '70px' }}>감정 점수</th>
+                          <th style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', color: 'var(--admin-text-light)', width: '70px' }}>우울</th>
+                          <th style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', color: 'var(--admin-text-light)', width: '70px' }}>불안</th>
+                          <th style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', color: 'var(--admin-text-light)', width: '70px' }}>스트레스</th>
+                          <th style={{ padding: '8px 4px', textAlign: 'left', fontWeight: '600', color: 'var(--admin-text-light)' }}>분석 내용</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userEmotionHistory
+                          .slice((emotionPage - 1) * emotionPageSize, emotionPage * emotionPageSize)
+                          .map((emotion, index) => {
+                          // 분석일을 두 줄로 포맷 (UTC -> 한국 시간 변환)
+                          const analysisDate = emotion.analysisDate ? toKoreanTime(emotion.analysisDate) : null;
+                          const dateLine = analysisDate ? analysisDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric' }) : '-';
+                          const timeLine = analysisDate ? analysisDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+
+                          return (
+                          <tr key={index} style={{ borderBottom: '1px solid var(--admin-border)' }}>
+                            <td style={{ padding: '8px 4px', verticalAlign: 'middle' }}>
+                              <div style={{ lineHeight: '1.4' }}>
+                                <div>{dateLine}</div>
+                                <div style={{ color: 'var(--admin-text-light)', fontSize: '12px' }}>{timeLine}</div>
+                              </div>
+                            </td>
+                            <td style={{ padding: '4px 2px', textAlign: 'center', verticalAlign: 'middle' }}>
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: '500',
+                                whiteSpace: 'nowrap',
+                                background: getEmotionLevelFromScore(emotion.emotionScore) === 'danger' ? '#FEE2E2' :
+                                           getEmotionLevelFromScore(emotion.emotionScore) === 'warning' ? '#FEF3C7' : '#D1FAE5',
+                                color: getEmotionLevelFromScore(emotion.emotionScore) === 'danger' ? '#DC2626' :
+                                       getEmotionLevelFromScore(emotion.emotionScore) === 'warning' ? '#D97706' : '#059669'
+                              }}>
+                                {mapScoreToEmotion(emotion.emotionScore)}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 4px', textAlign: 'center', fontWeight: '600', verticalAlign: 'middle' }}>
+                              {emotion.emotionScore ?? '-'}
+                            </td>
+                            <td style={{ padding: '8px 4px', textAlign: 'center', verticalAlign: 'middle' }}>
+                              <span style={{
+                                color: getEmotionLevelFromScore(emotion.depressionScore) === 'danger' ? '#EF4444' :
+                                       getEmotionLevelFromScore(emotion.depressionScore) === 'warning' ? '#F59E0B' : 'inherit'
+                              }}>
+                                {emotion.depressionScore ?? '-'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 4px', textAlign: 'center', verticalAlign: 'middle' }}>
+                              <span style={{
+                                color: getEmotionLevelFromScore(emotion.anxietyScore) === 'danger' ? '#EF4444' :
+                                       getEmotionLevelFromScore(emotion.anxietyScore) === 'warning' ? '#F59E0B' : 'inherit'
+                              }}>
+                                {emotion.anxietyScore ?? '-'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 4px', textAlign: 'center', verticalAlign: 'middle' }}>
+                              <span style={{
+                                color: getEmotionLevelFromScore(emotion.stressScore) === 'danger' ? '#EF4444' :
+                                       getEmotionLevelFromScore(emotion.stressScore) === 'warning' ? '#F59E0B' : 'inherit'
+                              }}>
+                                {emotion.stressScore ?? '-'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 4px', verticalAlign: 'middle' }}>
+                              {emotion.keywords && emotion.keywords.length > 0 ? (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                  {emotion.keywords.slice(0, 3).map((keyword, idx) => (
+                                    <span key={idx} style={{
+                                      background: 'var(--admin-primary-light)',
+                                      color: 'var(--admin-primary)',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      fontSize: '11px'
+                                    }}>
+                                      {keyword}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : '-'}
+                            </td>
+                          </tr>
+                        );
+                        })}
+                      </tbody>
+                    </table>
+                    {/* 감정 이력 페이지네이션 */}
+                    {userEmotionHistory.length > 0 && (
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginTop: '16px',
+                        paddingTop: '16px',
+                        borderTop: '1px solid var(--admin-border)'
+                      }}>
+                        <div style={{ fontSize: '13px', color: 'var(--admin-text-light)' }}>
+                          {(emotionPage - 1) * emotionPageSize + 1}-{Math.min(emotionPage * emotionPageSize, userEmotionHistory.length)} / 총 {userEmotionHistory.length}건
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button
+                            onClick={() => setEmotionPage(prev => Math.max(prev - 1, 1))}
+                            disabled={emotionPage === 1}
+                            style={{
+                              padding: '6px 12px',
+                              border: '1px solid var(--admin-border)',
+                              borderRadius: '4px',
+                              background: emotionPage === 1 ? 'var(--admin-bg)' : 'white',
+                              color: emotionPage === 1 ? 'var(--admin-text-light)' : 'var(--admin-text)',
+                              cursor: emotionPage === 1 ? 'not-allowed' : 'pointer',
+                              fontSize: '13px'
+                            }}
+                          >
+                            이전
+                          </button>
+                          {Array.from({ length: Math.ceil(userEmotionHistory.length / emotionPageSize) }, (_, i) => i + 1).map(page => (
+                            <button
+                              key={page}
+                              onClick={() => setEmotionPage(page)}
+                              style={{
+                                padding: '6px 10px',
+                                border: '1px solid',
+                                borderColor: page === emotionPage ? 'var(--admin-primary)' : 'var(--admin-border)',
+                                borderRadius: '4px',
+                                background: page === emotionPage ? 'var(--admin-primary)' : 'white',
+                                color: page === emotionPage ? 'white' : 'var(--admin-text)',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: page === emotionPage ? '600' : '400'
+                              }}
+                            >
+                              {page}
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => setEmotionPage(prev => Math.min(prev + 1, Math.ceil(userEmotionHistory.length / emotionPageSize)))}
+                            disabled={emotionPage === Math.ceil(userEmotionHistory.length / emotionPageSize)}
+                            style={{
+                              padding: '6px 12px',
+                              border: '1px solid var(--admin-border)',
+                              borderRadius: '4px',
+                              background: emotionPage === Math.ceil(userEmotionHistory.length / emotionPageSize) ? 'var(--admin-bg)' : 'white',
+                              color: emotionPage === Math.ceil(userEmotionHistory.length / emotionPageSize) ? 'var(--admin-text-light)' : 'var(--admin-text)',
+                              cursor: emotionPage === Math.ceil(userEmotionHistory.length / emotionPageSize) ? 'not-allowed' : 'pointer',
+                              fontSize: '13px'
+                            }}
+                          >
+                            다음
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 상태 정보 */}
@@ -710,9 +1069,6 @@ function Users() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={closeUserDetailModal}>닫기</button>
-              {selectedUserDetail && (
-                <button className="btn-primary" onClick={() => callGuardian(selectedUserDetail.id)}>보호자 연락</button>
-              )}
             </div>
           </div>
         </div>

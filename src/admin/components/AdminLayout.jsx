@@ -15,7 +15,6 @@ import chartBarIcon from '../assets/icons/chart-bar.svg';
 import usersIcon from '../assets/icons/users.svg';
 import heartIcon from '../assets/icons/heart.svg';
 import messageCircleIcon from '../assets/icons/message-circle.svg';
-import triangleAlertIcon from '../assets/icons/triangle-alert.svg';
 import fileTextIcon from '../assets/icons/file-text.svg';
 import settingsIcon from '../assets/icons/settings.svg';
 import infoIcon from '../assets/icons/info.svg';
@@ -94,8 +93,8 @@ function AdminLayout({ children }) {
               <img src={userIcon} alt="사용자" style={{ width: '16px', height: '16px', stroke: '#667EEA' }} />
             </div>
             <div className="user-details">
-              <span className="user-name">{currentUser.name || '홍길동'}</span>
-              <span className="user-role">{currentUser.role || '서울시청 복지과'}</span>
+              <span className="user-name">{currentUser.adminName || '관리자'}</span>
+              <span className="user-role">{currentUser.sigunguName || '소속 기관'}</span>
             </div>
             <button className="dropdown-toggle">
               <img src={chevronDownIcon} alt="더보기" style={{ width: '12px', height: '12px' }} />
@@ -143,12 +142,6 @@ function AdminLayout({ children }) {
             <a href="/admin/conversation" onClick={(e) => { e.preventDefault(); navigate('/admin/conversation'); }}>
               <img src={messageCircleIcon} alt="대화 분석" className="menu-icon" />
               <span>대화 분석</span>
-            </a>
-          </li>
-          <li className={`menu-item ${isActive('/admin/emergency') ? 'active' : ''}`}>
-            <a href="/admin/emergency" onClick={(e) => { e.preventDefault(); navigate('/admin/emergency'); }}>
-              <img src={triangleAlertIcon} alt="정서 위험 감지 기록" className="menu-icon" />
-              <span>정서 위험 감지 기록</span>
             </a>
           </li>
           <li className={`menu-item ${isActive('/admin/reports') ? 'active' : ''}`}>

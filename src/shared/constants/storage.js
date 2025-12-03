@@ -21,6 +21,7 @@ export const STORAGE_KEYS = {
 
   // ========== 채팅 ==========
   EUME_CHAT_ID: 'eume_chat_id', // Eume AI 채팅방 ID
+  EUME_LAST_MESSAGE_ID: 'eume_last_message_id', // 마지막으로 확인한 메시지 ID
 
   // ========== 관리자 ==========
   ADMIN_USER: 'eume_admin_user', // 관리자 정보 (JSON)
@@ -45,6 +46,7 @@ export const clearAllUserData = () => {
     STORAGE_KEYS.OAUTH_GENDER,
     STORAGE_KEYS.OAUTH_PHONE,
     STORAGE_KEYS.EUME_CHAT_ID,
+    STORAGE_KEYS.EUME_LAST_MESSAGE_ID,
   ];
 
   keysToRemove.forEach((key) => localStorage.removeItem(key));

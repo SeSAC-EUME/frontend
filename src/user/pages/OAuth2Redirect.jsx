@@ -43,7 +43,6 @@ function OAuth2Redirect() {
       const nickname = userData.nickname;
       const profileImage = userData.profileImage;
       const providerId = userData.providerId;
-      const isNewUser = userData.isNewUser || false;
       // 백엔드 테마 → 프론트엔드 테마 변환
       const theme = toFrontendTheme(userData.backgroundTheme);
 
@@ -57,43 +56,22 @@ function OAuth2Redirect() {
         return;
       }
 
-      // 신규 사용자인 경우 온보딩으로, 기존 사용자는 홈으로
-      if (isNewUser) {
-        // OAuth 사용자 정보 임시 저장 (온보딩에서 사용)
-        const oauthUser = {
-          userId,
-          email,
-          name,
-          profileImage,
-          providerId,
-        };
-        localStorage.setItem(
-          STORAGE_KEYS.OAUTH_USER,
-          JSON.stringify(oauthUser)
-        );
-        console.log('OAuth 사용자 정보 저장:', oauthUser);
+      // 사용자 정보 저장 후 홈으로 이동 (신규/기존 사용자 동일)
+      const userInfo = {
+        id: userId,
+        email,
+        userName: name,
+        nickname,
+        profileImage,
+        backgroundTheme: theme || 'ocean',
+      };
+      localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo));
+      localStorage.setItem(STORAGE_KEYS.USER_THEME, theme || 'ocean');
+      localStorage.setItem(STORAGE_KEYS.USER_VISITED, 'true');
+      console.log('사용자 정보 저장 완료:', userInfo);
 
-        // 신규 사용자 - 온보딩 1단계로 이동
-        console.log('신규 사용자 -> /user/onboarding-1로 이동');
-        navigate('/user/onboarding-1', { replace: true });
-      } else {
-        // 기존 사용자 - 사용자 정보 저장 후 홈으로 이동
-        const userInfo = {
-          id: userId,
-          email,
-          userName: name,
-          nickname,
-          profileImage,
-          backgroundTheme: theme,
-        };
-        localStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify(userInfo));
-        localStorage.setItem(STORAGE_KEYS.USER_THEME, theme);
-        localStorage.setItem(STORAGE_KEYS.USER_VISITED, 'true');
-        console.log('기존 사용자 정보 저장 완료:', userInfo);
-
-        // replace: true를 사용하여 뒤로가기 시 OAuth 리다이렉트 페이지로 돌아가지 않도록 함
-        navigate('/user/home', { replace: true });
-      }
+      // replace: true를 사용하여 뒤로가기 시 OAuth 리다이렉트 페이지로 돌아가지 않도록 함
+      navigate('/user/home', { replace: true });
       console.log('=== OAuth2 리다이렉트 처리 완료 ===');
     } catch (error) {
       console.error('OAuth2 리다이렉트 처리 오류:', error);

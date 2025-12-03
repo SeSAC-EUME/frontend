@@ -8,6 +8,12 @@ import { API_ENDPOINTS } from '../../shared/api/config';
 import axiosInstance from '../../shared/api/axios';
 import axiosRaw from '../../shared/api/axiosRaw';
 import { STORAGE_KEYS } from '../../shared/constants/storage';
+import {
+  toKoreanTime,
+  formatKoreanTime,
+  formatRelativeTime as formatRelativeTimeUtil,
+  formatDateTitle as formatDateTitleUtil,
+} from '../../shared/utils/dateUtils';
 
 const pinnedRooms = [
   {
@@ -15,12 +21,6 @@ const pinnedRooms = [
     title: '새 채팅',
     description: '빈 대화를 시작합니다',
     icon: '＋',
-  },
-  {
-    id: 'policy-info',
-    title: '정책 정보',
-    description: '정책/제도 안내를 받아보세요',
-    icon: '⚖️',
   },
   {
     id: 'ieum-talk',
@@ -31,13 +31,8 @@ const pinnedRooms = [
   },
 ];
 
-const defaultHistory = [
-  { id: 'h-1', title: '세상 목욕 제공', updatedAt: '방금 전' },
-  { id: 'h-2', title: 'TTS 기능 제공 여부', updatedAt: '오늘' },
-  { id: 'h-3', title: '학점은행제 자격증 인정', updatedAt: '오늘' },
-  { id: 'h-4', title: 'R 언어 개요 설명', updatedAt: '오늘' },
-  { id: 'h-5', title: '자동 sql 실행 방법', updatedAt: '오늘' },
-];
+// 초기 채팅 기록은 빈 배열 (API에서 로드)
+const defaultHistory = [];
 
 const initialMessages = {
   'ieum-talk': [
@@ -46,14 +41,6 @@ const initialMessages = {
       text: '안녕하세요, 오늘 하루는 어떠셨어요?',
       sender: 'ai',
       timestamp: '09:12',
-    },
-  ],
-  'policy-info': [
-    {
-      id: 'msg-2',
-      text: '필요한 정책 키워드를 알려주시면 바로 찾아볼게요.',
-      sender: 'ai',
-      timestamp: '09:10',
     },
   ],
   'new-chat': [],
@@ -81,7 +68,11 @@ function Home() {
   const [chatListId, setChatListId] = useState(null);
   const [isLoadingChat, setIsLoadingChat] = useState(true); // 채팅 로딩 상태
   const [isCheckingAuth, setIsCheckingAuth] = useState(true); // 인증 확인 상태
+  const [paginationByRoom, setPaginationByRoom] = useState({}); // 페이지네이션 상태 { roomId: { page, hasMore, isLoadingMore } }
+  const [chatListPagination, setChatListPagination] = useState({ page: 0, hasMore: false, isLoading: false }); // 채팅 목록 페이지네이션
+  const [hasNewEumeMessage, setHasNewEumeMessage] = useState(false); // 이음이 톡 새 메시지 알림
   const messagesContainerRef = useRef(null);
+  const shouldScrollToBottom = useRef(false); // 하단 스크롤 필요 여부 플래그
 
   // 인증 확인 및 사용자 정보 초기화
   useEffect(() => {
@@ -137,45 +128,74 @@ function Home() {
   }, [navigate]);
 
   // 사용자 채팅 목록 로드 (GET /api/user-chats)
-  const loadUserChatList = async () => {
+  const loadUserChatList = async (page = 0, isLoadMore = false) => {
+    // 추가 로드 시 로딩 상태 설정
+    if (isLoadMore) {
+      setChatListPagination((prev) => ({ ...prev, isLoading: true }));
+    }
+
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.LIST);
-      const chatList = Array.isArray(response) ? response : response.chatLists || [];
+      const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.LIST(page, 20));
+      // API 응답 구조: { chatRooms: [...], currentPage, totalPages, hasNext, ... }
+      const chatList = Array.isArray(response)
+        ? response
+        : response.chatRooms || response.chatLists || response.content || [];
+
+      const hasMore = response.hasNext ?? false;
 
       if (chatList.length > 0) {
-        const formattedHistory = chatList.map((chat) => ({
+        // id desc 정렬 (최신 채팅방이 위로)
+        const sortedList = [...chatList].sort((a, b) => {
+          const idA = a.id || a.chatListId || 0;
+          const idB = b.id || b.chatListId || 0;
+          return idB - idA;
+        });
+
+        const formattedHistory = sortedList.map((chat) => ({
           id: chat.id || chat.chatListId,
-          title: chat.title || '채팅',
+          // roomTitle 또는 title이 없으면 생성일자로 표시
+          title: chat.roomTitle || chat.title || formatDateTitle(chat.createdAt),
           updatedAt: chat.updatedAt
             ? formatRelativeTime(chat.updatedAt)
             : '이전',
         }));
-        setChatHistory(formattedHistory);
+
+        if (isLoadMore) {
+          // 추가 로드: 기존 목록 뒤에 붙임
+          setChatHistory((prev) => [...prev, ...formattedHistory]);
+        } else {
+          // 초기 로드
+          setChatHistory(formattedHistory);
+        }
+      } else if (!isLoadMore) {
+        setChatHistory([]);
       }
+
+      // 페이지네이션 상태 업데이트
+      setChatListPagination({ page, hasMore, isLoading: false });
     } catch (error) {
       // 404는 채팅 목록이 없는 경우 - 정상
       if (error.response?.status !== 404) {
         console.error('채팅 목록 로드 오류:', error);
       }
+      if (!isLoadMore) {
+        setChatHistory([]);
+      }
+      setChatListPagination((prev) => ({ ...prev, isLoading: false }));
     }
   };
 
-  // 상대 시간 포맷 (예: "방금 전", "1시간 전", "어제")
-  const formatRelativeTime = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMin = Math.floor(diffMs / 60000);
-    const diffHour = Math.floor(diffMs / 3600000);
-    const diffDay = Math.floor(diffMs / 86400000);
-
-    if (diffMin < 1) return '방금 전';
-    if (diffMin < 60) return `${diffMin}분 전`;
-    if (diffHour < 24) return `${diffHour}시간 전`;
-    if (diffDay === 1) return '어제';
-    if (diffDay < 7) return `${diffDay}일 전`;
-    return date.toLocaleDateString('ko-KR');
+  // 채팅 목록 더 불러오기
+  const loadMoreChatList = () => {
+    const { page, hasMore, isLoading } = chatListPagination;
+    if (hasMore && !isLoading) {
+      loadUserChatList(page + 1, true);
+    }
   };
+
+  // 날짜 포맷 함수들은 dateUtils에서 import
+  const formatDateTitle = formatDateTitleUtil;
+  const formatRelativeTime = formatRelativeTimeUtil;
 
   // Eume AI 채팅방 생성 또는 조회
   const initializeEumeChat = async () => {
@@ -233,10 +253,20 @@ function Home() {
   };
 
   // 채팅 내역 로드 (GET /api/eume-chats/{id}/contents)
-  const loadChatContents = async (chatId) => {
+  const loadChatContents = async (chatId, page = 0, isLoadMore = false) => {
+    const roomId = 'ieum-talk';
+
+    // 추가 로드 시 로딩 상태 설정
+    if (isLoadMore) {
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [roomId]: { ...prev[roomId], isLoadingMore: true },
+      }));
+    }
+
     try {
       const contentsResponse = await axiosInstance.get(
-        API_ENDPOINTS.EUME_CHAT.CONTENTS(chatId)
+        API_ENDPOINTS.EUME_CHAT.CONTENTS(chatId, page, 20)
       );
       console.log('채팅 내역:', contentsResponse);
 
@@ -245,29 +275,101 @@ function Home() {
         ? contentsResponse
         : contentsResponse.contents || contentsResponse.messages || [];
 
+      // 페이지네이션 정보 추출
+      const hasMore = contentsResponse.hasNext ?? contents.length >= 20;
+
       if (contents.length > 0) {
+        // 초기 로드 시 가장 최근 메시지 ID 저장 (서버에서 최신순으로 오므로 첫 번째가 가장 최근)
+        if (!isLoadMore && contents[0]?.id) {
+          localStorage.setItem(STORAGE_KEYS.EUME_LAST_MESSAGE_ID, String(contents[0].id));
+        }
+
         const loadedMessages = contents.map((content, index) => ({
-          id: `loaded-${content.id || index}`,
+          id: `loaded-${content.id || index}-${page}`,
           text: content.messageContent || content.content || content.message,
           sender: content.messageType === 'USER' || content.sender === 'user' ? 'user' : 'ai',
-          timestamp: content.createdAt
-            ? new Date(content.createdAt).toLocaleTimeString('ko-KR', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
-            : '',
+          timestamp: formatKoreanTime(content.createdAt),
         }));
 
-        setMessagesByRoom((prev) => ({
-          ...prev,
-          'ieum-talk': loadedMessages,
-        }));
+        // 서버에서 최신순으로 오는 경우 reverse (오래된 것이 위, 최신이 아래)
+        const orderedMessages = [...loadedMessages].reverse();
+
+        setMessagesByRoom((prev) => {
+          if (isLoadMore) {
+            // 추가 로드: 이전 메시지를 앞에 붙임
+            return {
+              ...prev,
+              [roomId]: [...orderedMessages, ...(prev[roomId] || [])],
+            };
+          }
+          // 초기 로드: 하단 스크롤 플래그 설정
+          shouldScrollToBottom.current = true;
+          return {
+            ...prev,
+            [roomId]: orderedMessages,
+          };
+        });
       }
+
+      // 페이지네이션 상태 업데이트
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [roomId]: { page, hasMore, isLoadingMore: false },
+      }));
     } catch (error) {
       // 404는 아직 대화 내역이 없는 경우 - 정상
       if (error.response?.status !== 404) {
         console.error('채팅 내역 로드 오류:', error);
       }
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [roomId]: { page: 0, hasMore: false, isLoadingMore: false },
+      }));
+    }
+  };
+
+  // 이음이 톡 새 메시지 확인 함수
+  const checkNewEumeMessage = async () => {
+    try {
+      // 저장된 마지막 메시지 ID 가져오기
+      const savedLastId = localStorage.getItem(STORAGE_KEYS.EUME_LAST_MESSAGE_ID);
+
+      // 캐시된 채팅방 ID 또는 기존 chatListId 사용
+      let chatId = chatListId || localStorage.getItem(STORAGE_KEYS.EUME_CHAT_ID);
+
+      if (!chatId) {
+        // 채팅방 정보 조회
+        try {
+          const chatInfo = await axiosInstance.get(API_ENDPOINTS.EUME_CHAT.ME);
+          if (chatInfo.id) {
+            chatId = chatInfo.id;
+          }
+        } catch {
+          // 채팅방이 없으면 새 메시지 없음
+          return;
+        }
+      }
+
+      if (!chatId) return;
+
+      // 최신 메시지 조회 (첫 페이지만)
+      const contentsResponse = await axiosInstance.get(
+        API_ENDPOINTS.EUME_CHAT.CONTENTS(chatId, 0, 1)
+      );
+
+      const contents = Array.isArray(contentsResponse)
+        ? contentsResponse
+        : contentsResponse.contents || contentsResponse.messages || [];
+
+      if (contents.length > 0 && contents[0]?.id) {
+        const latestId = String(contents[0].id);
+        // 저장된 ID와 다르면 새 메시지가 있음
+        if (savedLastId && latestId !== savedLastId) {
+          setHasNewEumeMessage(true);
+        }
+      }
+    } catch (error) {
+      console.error('이음이 톡 새 메시지 확인 오류:', error);
     }
   };
 
@@ -281,13 +383,61 @@ function Home() {
 
   const currentMessages = messagesByRoom[selectedChatId] || [];
   const isStreaming = !!isStreamingByRoom[selectedChatId];
+  const currentPagination = paginationByRoom[selectedChatId] || { page: 0, hasMore: false, isLoadingMore: false };
 
+  // 하단 스크롤 처리 (초기 로드 또는 새 메시지 시에만)
   useEffect(() => {
-    if (messagesContainerRef.current) {
+    if (messagesContainerRef.current && shouldScrollToBottom.current) {
       messagesContainerRef.current.scrollTop =
         messagesContainerRef.current.scrollHeight;
+      shouldScrollToBottom.current = false;
     }
-  }, [currentMessages, isStreaming, selectedChatId]);
+  }, [currentMessages.length, isStreaming]);
+
+  // 채팅방 변경 시 하단 스크롤 플래그 설정
+  useEffect(() => {
+    shouldScrollToBottom.current = true;
+  }, [selectedChatId]);
+
+  // 무한 스크롤: 맨 위로 스크롤 시 이전 메시지 로드
+  const handleScroll = async () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // 맨 위에 도달했을 때 (약간의 여유 두어 50px 이내)
+    if (container.scrollTop < 50) {
+      const { page, hasMore, isLoadingMore } = currentPagination;
+
+      if (hasMore && !isLoadingMore) {
+        // 무한 스크롤 시 하단 스크롤 방지
+        shouldScrollToBottom.current = false;
+        const previousScrollHeight = container.scrollHeight;
+
+        if (selectedChatId === 'ieum-talk' && chatListId) {
+          await loadChatContents(chatListId, page + 1, true);
+        } else if (!['new-chat', 'ieum-talk'].includes(selectedChatId)) {
+          await loadUserChatContents(selectedChatId, page + 1, true);
+        }
+
+        // 이전 메시지 로드 후 스크롤 위치 유지 (새로 추가된 높이만큼 아래로)
+        requestAnimationFrame(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = newScrollHeight - previousScrollHeight;
+          }
+        });
+      }
+    }
+  };
+
+  // 스크롤 이벤트 리스너 등록
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll);
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [selectedChatId, currentPagination, chatListId]);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
@@ -296,15 +446,32 @@ function Home() {
     setPrompt('');
     setIsSidebarOpen(false);
 
+    const roomIdStr = String(roomId);
+
+    // 이음이 톡 선택 시 알림 제거
+    if (roomIdStr === 'ieum-talk') {
+      setHasNewEumeMessage(false);
+    }
+
+    // 새 채팅 화면 선택 시 이음이 톡 새 메시지 확인
+    if (roomIdStr === 'new-chat') {
+      checkNewEumeMessage();
+    }
+
     // 이미 메시지가 로드된 경우 스킵
     if (messagesByRoom[roomId] && messagesByRoom[roomId].length > 0) {
       return;
     }
 
     // 고정 채팅방이 아닌 경우 (일반 채팅방) 과거 대화 로드
-    const isPinnedRoom = ['new-chat', 'policy-info', 'ieum-talk'].includes(roomId);
-    if (!isPinnedRoom && !roomId.startsWith('temp-')) {
+    const isPinnedRoom = ['new-chat', 'ieum-talk'].includes(roomIdStr);
+    const isTempRoom = roomIdStr.startsWith('temp-');
+
+    if (!isPinnedRoom && !isTempRoom) {
+      // 로딩 상태 표시
+      setIsLoadingChat(true);
       await loadUserChatContents(roomId);
+      setIsLoadingChat(false);
     } else {
       // 고정 채팅방은 빈 배열로 초기화
       setMessagesByRoom((prev) =>
@@ -314,34 +481,60 @@ function Home() {
   };
 
   // 일반 채팅방 내용 로드 (GET /api/user-chats/{chatListId}/contents)
-  const loadUserChatContents = async (chatId) => {
+  const loadUserChatContents = async (chatId, page = 0, isLoadMore = false) => {
+    // 추가 로드 시 로딩 상태 설정
+    if (isLoadMore) {
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [chatId]: { ...prev[chatId], isLoadingMore: true },
+      }));
+    }
+
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.CONTENTS(chatId));
+      const response = await axiosInstance.get(API_ENDPOINTS.USER_CHAT.CONTENTS(chatId, page, 20));
       const contents = Array.isArray(response) ? response : response.contents || [];
+
+      // 페이지네이션 정보 추출
+      const hasMore = response.hasNext ?? contents.length >= 20;
 
       if (contents.length > 0) {
         const loadedMessages = contents.map((content, index) => ({
-          id: `loaded-${content.id || index}`,
+          id: `loaded-${content.id || index}-${page}`,
           text: content.messageContent || content.content || content.message,
           sender: content.messageType === 'USER' || content.sender === 'user' ? 'user' : 'ai',
-          timestamp: content.createdAt
-            ? new Date(content.createdAt).toLocaleTimeString('ko-KR', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
-            : '',
+          timestamp: formatKoreanTime(content.createdAt),
         }));
 
-        setMessagesByRoom((prev) => ({
-          ...prev,
-          [chatId]: loadedMessages,
-        }));
-      } else {
+        // 서버에서 최신순으로 오는 경우 reverse (오래된 것이 위, 최신이 아래)
+        const orderedMessages = [...loadedMessages].reverse();
+
+        setMessagesByRoom((prev) => {
+          if (isLoadMore) {
+            // 추가 로드: 이전 메시지를 앞에 붙임
+            return {
+              ...prev,
+              [chatId]: [...orderedMessages, ...(prev[chatId] || [])],
+            };
+          }
+          // 초기 로드: 하단 스크롤 플래그 설정
+          shouldScrollToBottom.current = true;
+          return {
+            ...prev,
+            [chatId]: orderedMessages,
+          };
+        });
+      } else if (!isLoadMore) {
         setMessagesByRoom((prev) => ({
           ...prev,
           [chatId]: [],
         }));
       }
+
+      // 페이지네이션 상태 업데이트
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [chatId]: { page, hasMore, isLoadingMore: false },
+      }));
     } catch (error) {
       // 404는 대화 내역이 없는 경우 - 정상
       if (error.response?.status !== 404) {
@@ -351,34 +544,19 @@ function Home() {
         ...prev,
         [chatId]: [],
       }));
+      setPaginationByRoom((prev) => ({
+        ...prev,
+        [chatId]: { page: 0, hasMore: false, isLoadingMore: false },
+      }));
     }
   };
 
-  const handleStartNewChat = async () => {
-    try {
-      // POST /api/user-chats - 새 채팅방 생성
-      const response = await axiosInstance.post(API_ENDPOINTS.USER_CHAT.CREATE);
-      const newChatId = response.id || response.chatListId;
-
-      if (newChatId) {
-        const newEntry = {
-          id: newChatId,
-          title: response.title || '새 채팅',
-          updatedAt: '방금 전',
-        };
-        setChatHistory((prev) => [newEntry, ...prev]);
-        setMessagesByRoom((prev) => ({ ...prev, [newChatId]: [] }));
-        handleSelectRoom(newChatId);
-      }
-    } catch (error) {
-      console.error('새 채팅 생성 오류:', error);
-      // 백엔드 오류 시 로컬 임시 채팅방 생성
-      const tempId = `temp-${Date.now()}`;
-      const newEntry = { id: tempId, title: '새 채팅', updatedAt: '방금 전' };
-      setChatHistory((prev) => [newEntry, ...prev]);
-      setMessagesByRoom((prev) => ({ ...prev, [tempId]: [] }));
-      handleSelectRoom(tempId);
-    }
+  const handleStartNewChat = () => {
+    // API 호출 없이 임시 채팅방으로 전환
+    // 실제 채팅방은 첫 메시지 전송 시 생성됨
+    setSelectedChatId('new-chat');
+    setMessagesByRoom((prev) => ({ ...prev, 'new-chat': [] }));
+    setPrompt('');
   };
 
   const handleActionClick = (id) => {
@@ -405,6 +583,8 @@ function Home() {
       timestamp,
     };
 
+    // 새 메시지 추가: 하단 스크롤 플래그 설정
+    shouldScrollToBottom.current = true;
     setMessagesByRoom((prev) => ({
       ...prev,
       [roomId]: [...(prev[roomId] || []), userMessage],
@@ -419,6 +599,9 @@ function Home() {
     );
 
     setIsStreamingByRoom((prev) => ({ ...prev, [roomId]: true }));
+
+    // 실제 메시지를 보낼 채팅방 ID (새 채팅의 경우 생성 후 변경됨)
+    let actualRoomId = roomId;
 
     try {
       // ieum-talk인 경우 Eume AI API 호출
@@ -458,32 +641,59 @@ function Home() {
           }),
         };
 
+        // AI 응답: 하단 스크롤 플래그 설정
+        shouldScrollToBottom.current = true;
         setMessagesByRoom((prev) => ({
           ...prev,
           [roomId]: [...(prev[roomId] || []), aiMessage],
         }));
-      } else if (roomId === 'policy-info') {
-        // 정책 정보 채팅방은 목업 유지 (별도 API 미구현)
-        setTimeout(() => {
-          const aiMessage = {
-            id: `ai-${Date.now()}`,
-            text: '정책 정보 검색 기능은 준비 중입니다.',
-            sender: 'ai',
-            timestamp: new Date().toLocaleTimeString('ko-KR', {
-              hour: '2-digit',
-              minute: '2-digit',
-            }),
-          };
-
-          setMessagesByRoom((prev) => ({
-            ...prev,
-            [roomId]: [...(prev[roomId] || []), aiMessage],
-          }));
-        }, 600);
       } else {
-        // 일반 채팅방은 USER_CHAT API 호출
+        // 새 채팅방인 경우 먼저 생성 API 호출
+        const roomIdStr = String(roomId);
+        const isNewChat = roomIdStr === 'new-chat' || roomIdStr.startsWith('temp-');
+
+        if (isNewChat) {
+          // 1. 채팅방 생성 API 호출
+          const createResponse = await axiosInstance.post(API_ENDPOINTS.USER_CHAT.CREATE);
+          const newChatId = createResponse.id || createResponse.chatListId;
+
+          if (newChatId) {
+            actualRoomId = newChatId;
+
+            // 채팅 목록에 새 채팅방 추가 (제목은 첫 메시지 텍스트)
+            const newEntry = {
+              id: newChatId,
+              title: messageText.length > 30 ? messageText.slice(0, 30) + '...' : messageText,
+              updatedAt: '방금 전',
+            };
+            setChatHistory((prev) => [newEntry, ...prev]);
+
+            // 기존 메시지를 새 채팅방으로 이동
+            setMessagesByRoom((prev) => {
+              const currentMessages = prev[roomId] || [];
+              const newState = { ...prev, [newChatId]: currentMessages };
+              // 임시 채팅방 메시지 삭제
+              if (roomIdStr === 'new-chat') {
+                newState['new-chat'] = [];
+              }
+              return newState;
+            });
+
+            // 선택된 채팅방 ID 변경
+            setSelectedChatId(newChatId);
+
+            // streaming 상태도 새 채팅방으로 이동
+            setIsStreamingByRoom((prev) => ({
+              ...prev,
+              [newChatId]: true,
+              [roomId]: false,
+            }));
+          }
+        }
+
+        // 2. 메시지 전송 API 호출
         const response = await axiosInstance.post(
-          API_ENDPOINTS.USER_CHAT.CONTENTS(roomId),
+          API_ENDPOINTS.USER_CHAT.CONTENTS(actualRoomId),
           { messageContent: messageText }
         );
 
@@ -498,9 +708,11 @@ function Home() {
           }),
         };
 
+        // AI 응답: 하단 스크롤 플래그 설정
+        shouldScrollToBottom.current = true;
         setMessagesByRoom((prev) => ({
           ...prev,
-          [roomId]: [...(prev[roomId] || []), aiMessage],
+          [actualRoomId]: [...(prev[actualRoomId] || []), aiMessage],
         }));
       }
     } catch (error) {
@@ -525,14 +737,18 @@ function Home() {
         }),
       };
 
+      // 에러 메시지도 하단 스크롤
+      shouldScrollToBottom.current = true;
       setMessagesByRoom((prev) => ({
         ...prev,
         [roomId]: [...(prev[roomId] || []), errorMessage],
       }));
     } finally {
+      // 원래 roomId와 actualRoomId 둘 다 streaming 해제
       setIsStreamingByRoom((prev) => ({
         ...prev,
         [roomId]: false,
+        [actualRoomId]: false,
       }));
     }
   };
@@ -571,13 +787,16 @@ function Home() {
         userInfo={userInfo}
         isUserMenuOpen={isUserMenuOpen}
         setIsUserMenuOpen={setIsUserMenuOpen}
+        chatListPagination={chatListPagination}
+        onLoadMoreChatList={loadMoreChatList}
+        hasNewEumeMessage={hasNewEumeMessage}
       />
 
-      <div className="chat-main" style={{ marginLeft: isSidebarOpen ? 320 : 60 }}>
+      <div className="chat-main" style={{ marginLeft: isSidebarOpen ? 320 : 60 }} ref={messagesContainerRef}>
         <Header isSidebarOpen={isSidebarOpen} onToggleSidebar={toggleSidebar} />
 
-        <div className="chat-messages" ref={messagesContainerRef}>
-          {isLoadingChat && selectedChatId === 'ieum-talk' ? (
+        <div className="chat-messages">
+          {isLoadingChat ? (
             <div className="chat-welcome">
               <div style={{ textAlign: 'center', color: '#666' }}>
                 <p>대화 내역을 불러오는 중...</p>
@@ -596,13 +815,25 @@ function Home() {
                   onKeyPress={handleKeyPress}
                 />
                 <div className="prompt-actions">
-                  <button className="prompt-action" aria-label="음성 입력">🎙️</button>
-                  <button className="prompt-action" aria-label="업로드">⬆️</button>
+                  <button
+                    className="send-btn"
+                    onClick={handleSendMessage}
+                    disabled={!prompt.trim()}
+                    aria-label="전송"
+                  >
+                    ➤
+                  </button>
                 </div>
               </div>
             </div>
           ) : (
             <>
+              {/* 무한 스크롤 로딩 인디케이터 */}
+              {currentPagination.isLoadingMore && (
+                <div style={{ textAlign: 'center', padding: '10px', color: '#888' }}>
+                  이전 대화 불러오는 중...
+                </div>
+              )}
               {currentMessages.map((msg) => (
                 <div key={msg.id} className={`message ${msg.sender}`}>
                   <div className="message-content">

@@ -18,24 +18,15 @@ function Login() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // 이미 로그인된 사용자는 적절한 페이지로 리다이렉트
+  // 이미 로그인된 사용자는 홈으로 리다이렉트
   useEffect(() => {
     const checkAuthStatus = async () => {
       const userInfo = localStorage.getItem(STORAGE_KEYS.USER_INFO);
-      const oauthUser = localStorage.getItem(STORAGE_KEYS.OAUTH_USER);
-      const onboardingComplete = localStorage.getItem(STORAGE_KEYS.USER_ONBOARDING);
 
-      // 1. 이미 로그인 완료된 사용자
+      // 이미 로그인 완료된 사용자
       if (userInfo) {
         console.log('이미 로그인된 사용자 - 홈으로 리다이렉트');
         navigate('/user/home', { replace: true });
-        return;
-      }
-
-      // 2. OAuth 로그인 후 온보딩 진행 중
-      if (oauthUser && !onboardingComplete) {
-        console.log('온보딩 진행 중 - 온보딩 페이지로 리다이렉트');
-        navigate('/user/onboarding-1', { replace: true });
         return;
       }
 
