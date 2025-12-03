@@ -521,7 +521,6 @@ function Users() {
                 <th className="sortable" onClick={() => handleSort('status')}>상태</th>
                 <th className="sortable" onClick={() => handleSort('riskScore')}>위험도</th>
                 <th className="sortable" onClick={() => handleSort('lastActive')}>최근 활동</th>
-                <th>관리</th>
               </tr>
             </thead>
             <tbody>
@@ -569,19 +568,6 @@ function Users() {
                       </div>
                     </td>
                     <td onClick={() => viewUserDetail(user.id)} style={{ cursor: 'pointer' }}>{formatDateTime(user.lastActive)}</td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="action-icon-btn" onClick={() => viewUserDetail(user.id)} title="상세보기">
-                          <img src={userIcon} alt="상세" />
-                        </button>
-                        <button className="action-icon-btn" onClick={() => callGuardian(user.id)} title="보호자 연락">
-                          <img src={phoneIcon} alt="전화" />
-                        </button>
-                        <button className="action-icon-btn" onClick={() => editUser(user.id)} title="정보수정">
-                          <img src={settingsIcon} alt="수정" />
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))
               )}

@@ -178,35 +178,6 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* 긴급 알림 */}
-          <div className="emergency-alerts">
-            <div className="emergency-header">
-              <img src={triangleAlertIcon} alt="긴급" style={{ width: '24px', height: '24px', stroke: '#DC2626' }} />
-              <h3>긴급 알림</h3>
-            </div>
-            <div className="alert-item">
-              <div className="alert-info">
-                <div className="alert-user">김영희 님 (78세)</div>
-                <div className="alert-message">우울 감정 지수 급상승 - 즉시 확인 필요</div>
-              </div>
-              <button className="alert-action" onClick={() => viewUserDetail(1)}>확인하기</button>
-            </div>
-            <div className="alert-item">
-              <div className="alert-info">
-                <div className="alert-user">박철수 님 (82세)</div>
-                <div className="alert-message">3일간 미접속 - 안부 확인 권장</div>
-              </div>
-              <button className="alert-action" onClick={() => viewUserDetail(2)}>확인하기</button>
-            </div>
-            <div className="alert-item">
-              <div className="alert-info">
-                <div className="alert-user">이순자 님 (75세)</div>
-                <div className="alert-message">긴급 연락 요청 - 전화 연락 필요</div>
-              </div>
-              <button className="alert-action" onClick={() => viewUserDetail(3)}>확인하기</button>
-            </div>
-          </div>
-
           {/* 차트 영역 */}
           <div className="charts-row">
             <div className="chart-card emotion-chart">
